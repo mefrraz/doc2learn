@@ -5,14 +5,16 @@ import type { Request, Response } from 'express'
 const f = createUploadthing()
 
 // UTApi client for server-side uploads
-export const utapi = new UTApi()
+// Pass token if available in environment
+const token = process.env.UPLOADTHING_TOKEN;
+export const utapi = token ? new UTApi({ token }) : new UTApi();
 
 // File router for PDF uploads (for direct client uploads if needed)
 export const uploadRouter = {
   // PDF uploader route
   pdfUploader: f({
     pdf: {
-      maxFileSize: '50MB',
+      maxFileSize: '50MB' as const,
       maxFileCount: 1,
     },
   })
