@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { apiEndpoint } from '@/lib/config'
 
 interface User {
   id: string
@@ -28,8 +29,6 @@ interface AuthState {
   initialize: () => Promise<void>
 }
 
-const API_URL = 'http://localhost:3001'
-
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -46,7 +45,7 @@ export const useAuthStore = create<AuthState>()(
       signInWithEmail: async (email, password) => {
         set({ isLoading: true, error: null })
         try {
-          const response = await fetch(`${API_URL}/api/auth/login`, {
+          const response = await fetch(apiEndpoint('api/auth/login'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -72,7 +71,7 @@ export const useAuthStore = create<AuthState>()(
       signUpWithEmail: async (email, password, name) => {
         set({ isLoading: true, error: null })
         try {
-          const response = await fetch(`${API_URL}/api/auth/register`, {
+          const response = await fetch(apiEndpoint('api/auth/register'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -98,7 +97,7 @@ export const useAuthStore = create<AuthState>()(
       signOut: async () => {
         set({ isLoading: true })
         try {
-          await fetch(`${API_URL}/api/auth/logout`, {
+          await fetch(apiEndpoint('api/auth/logout'), {
             method: 'POST',
             credentials: 'include',
           })
@@ -116,7 +115,7 @@ export const useAuthStore = create<AuthState>()(
         if (!token) return
         
         try {
-          const response = await fetch(`${API_URL}/api/auth/me`, {
+          const response = await fetch(apiEndpoint('api/auth/me'), {
             credentials: 'include',
             headers: {
               'Authorization': `Bearer ${token}`,
