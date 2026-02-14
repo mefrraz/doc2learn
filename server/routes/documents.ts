@@ -9,6 +9,7 @@ import { AIService, AIProviderType } from '../lib/ai';
 import { COMBINED_PROMPT, parseAIJsonResponse } from '../lib/prompts';
 import { decrypt } from '../lib/encryption';
 import { utapi } from '../lib/uploadthing';
+import { UTFile } from 'uploadthing/server';
 
 const router = Router();
 
@@ -113,11 +114,9 @@ router.post('/upload', authenticateToken, requireAuth, uploadMemoryMiddleware.si
     let fileKey = '';
     
     try {
-      const uploadResult = await utapi.uploadFiles([{
-        name: file.originalname,
-        type: file.mimetype,
-        data: file.buffer,
-      }]);
+      // Use UTFile for proper buffer handling
+      const fileToUpload = new UTFile([file.buffer], file.originalname);
+      const uploadResult = await utapi.uploadFiles([fileToUpload]);
       
       if (uploadResult[0].data) {
         fileUrl = uploadResult[0].data.url;
