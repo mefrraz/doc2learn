@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/authStore'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -11,6 +12,7 @@ import { apiEndpoint } from '@/lib/config'
 import type { Document } from '@/lib/types'
 
 export function DocumentsPage() {
+  const { t } = useTranslation()
   const { user, token } = useAuthStore()
   const [documents, setDocuments] = useState<Document[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -54,8 +56,8 @@ export function DocumentsPage() {
     if (file.type !== 'application/pdf') {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Only PDF files are supported',
+        title: t('common.error'),
+        description: t('documents.onlyPDF'),
       })
       return
     }
@@ -63,8 +65,8 @@ export function DocumentsPage() {
     if (file.size > 50 * 1024 * 1024) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'File size must be less than 50MB',
+        title: t('common.error'),
+        description: t('documents.fileTooLarge'),
       })
       return
     }
@@ -93,16 +95,19 @@ export function DocumentsPage() {
       const data = await response.json()
       
       toast({
-        title: 'Success',
-        description: `Document uploaded successfully. Extracted ${data.metadata?.textLength || 0} characters from ${data.metadata?.numPages || 0} pages.`,
+        title: t('common.success'),
+        description: t('documents.uploadSuccess', { 
+          chars: data.metadata?.textLength || 0, 
+          pages: data.metadata?.numPages || 0 
+        }),
       })
 
       fetchDocuments()
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to upload document',
+        title: t('common.error'),
+        description: t('documents.uploadError'),
       })
     } finally {
       setIsUploading(false)
@@ -122,16 +127,16 @@ export function DocumentsPage() {
       })
       
       toast({
-        title: 'Success',
-        description: 'Document deleted',
+        title: t('common.success'),
+        description: t('documents.deleteSuccess'),
       })
       
       fetchDocuments()
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to delete document',
+        title: t('common.error'),
+        description: t('documents.deleteError'),
       })
     }
   }
@@ -146,9 +151,9 @@ export function DocumentsPage() {
     <div className="p-6 lg:p-8 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Documents</h1>
+          <h1 className="text-3xl font-bold">{t('documents.title')}</h1>
           <p className="text-muted-foreground">
-            Upload and manage your PDFs
+            {t('documents.uploadDesc', 'Upload and manage your PDFs')}
           </p>
         </div>
         <div>
@@ -164,7 +169,7 @@ export function DocumentsPage() {
             <Button asChild disabled={isUploading}>
               <span>
                 <Upload className="w-4 h-4 mr-2" />
-                {isUploading ? 'Uploading...' : 'Upload PDF'}
+                {isUploading ? t('documents.processing') : t('documents.uploadNew')}
               </span>
             </Button>
           </label>
@@ -174,7 +179,7 @@ export function DocumentsPage() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
-          placeholder="Search documents..."
+          placeholder={t('common.searchDocuments')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10"
@@ -189,15 +194,15 @@ export function DocumentsPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <FileText className="w-16 h-16 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No documents yet</h3>
+            <h3 className="text-lg font-semibold mb-2">{t('documents.noDocuments')}</h3>
             <p className="text-muted-foreground text-center mb-4">
-              Upload your first PDF to start creating learning experiences
+              {t('documents.noDocumentsDesc')}
             </p>
             <label htmlFor="file-upload">
               <Button asChild>
                 <span>
                   <Upload className="w-4 h-4 mr-2" />
-                  Upload PDF
+                  {t('documents.uploadNew')}
                 </span>
               </Button>
             </label>

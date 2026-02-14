@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/authStore'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -19,6 +20,7 @@ const PROVIDERS = [
 ] as const
 
 export function ApiKeysPage() {
+  const { t } = useTranslation()
   const { user, token } = useAuthStore()
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -79,8 +81,8 @@ export function ApiKeysPage() {
       }
 
       toast({
-        title: 'Success',
-        description: `API key for ${provider} saved successfully`,
+        title: t('common.success'),
+        description: t('settings.keySavedFor', { provider }),
       })
 
       setNewKey('')
@@ -90,8 +92,8 @@ export function ApiKeysPage() {
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to save API key',
+        title: t('common.error'),
+        description: t('settings.keysError'),
       })
     }
   }
@@ -109,16 +111,16 @@ export function ApiKeysPage() {
       })
 
       toast({
-        title: 'Success',
-        description: `API key for ${provider} deleted`,
+        title: t('common.success'),
+        description: t('settings.keyDeletedFor', { provider }),
       })
 
       fetchApiKeys()
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to delete API key',
+        title: t('common.error'),
+        description: t('settings.keyDeleteError', 'Failed to delete API key'),
       })
     }
   }
@@ -128,22 +130,22 @@ export function ApiKeysPage() {
       <Link to="/settings">
         <Button variant="ghost" size="sm">
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Settings
+          {t('settings.backToSettings', 'Back to Settings')}
         </Button>
       </Link>
 
       <div>
-        <h1 className="text-3xl font-bold">API Keys</h1>
+        <h1 className="text-3xl font-bold">{t('settings.apiKeys')}</h1>
         <p className="text-muted-foreground">
-          Manage your AI provider API keys (BYOK)
+          {t('settings.apiKeysDesc')}
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Your API Keys</CardTitle>
+          <CardTitle>{t('settings.yourApiKeys', 'Your API Keys')}</CardTitle>
           <CardDescription>
-            Add your own API keys to use with Doc2Learn. Your keys are encrypted and stored securely.
+            {t('settings.apiKeysSecure', 'Add your own API keys to use with Doc2Learn. Your keys are encrypted and stored securely.')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -166,11 +168,11 @@ export function ApiKeysPage() {
                         <p className="font-semibold">{provider.name}</p>
                         {existingKey ? (
                           <p className="text-sm text-muted-foreground">
-                            Key ending in ••••{existingKey.keyLast4}
+                            {t('settings.keyEnding', 'Key ending in ••••{{last4}}', { last4: existingKey.keyLast4 })}
                             {existingKey.name && ` (${existingKey.name})`}
                           </p>
                         ) : (
-                          <p className="text-sm text-muted-foreground">Not configured</p>
+                          <p className="text-sm text-muted-foreground">{t('settings.notConfigured', 'Not configured')}</p>
                         )}
                       </div>
                     </div>
@@ -179,7 +181,7 @@ export function ApiKeysPage() {
                         <>
                           <span className="flex items-center gap-1 text-sm text-green-600">
                             <CheckCircle className="w-4 h-4" />
-                            Active
+                            {t('settings.active', 'Active')}
                           </span>
                           <Button
                             variant="ghost"

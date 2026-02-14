@@ -1,26 +1,29 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Key, User, Shield } from 'lucide-react'
 
 export function SettingsPage() {
+  const { t } = useTranslation()
+  
   const settings = [
     {
-      title: 'API Keys',
-      description: 'Manage your AI provider API keys',
+      title: t('settings.apiKeys'),
+      description: t('settings.apiKeysDesc'),
       icon: Key,
       href: '/settings/api-keys',
     },
     {
-      title: 'Profile',
-      description: 'Update your account information',
+      title: t('settings.profile'),
+      description: t('settings.profileDesc'),
       icon: User,
       href: '/settings/profile',
       disabled: true,
     },
     {
-      title: 'Security',
-      description: 'Password and authentication settings',
+      title: t('settings.security'),
+      description: t('settings.securityDesc'),
       icon: Shield,
       href: '/settings/security',
       disabled: true,
@@ -30,9 +33,9 @@ export function SettingsPage() {
   return (
     <div className="p-6 lg:p-8 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
+        <h1 className="text-3xl font-bold">{t('settings.title')}</h1>
         <p className="text-muted-foreground">
-          Manage your account and preferences
+          {t('settings.manageAccount', 'Manage your account and preferences')}
         </p>
       </div>
 
@@ -53,12 +56,12 @@ export function SettingsPage() {
             <CardContent>
               {item.disabled ? (
                 <Button variant="outline" disabled className="w-full">
-                  Coming Soon
+                  {t('settings.comingSoon')}
                 </Button>
               ) : (
                 <Link to={item.href}>
                   <Button variant="outline" className="w-full">
-                    Manage
+                    {t('settings.manage', 'Manage')}
                   </Button>
                 </Link>
               )}

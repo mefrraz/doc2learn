@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/authStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,6 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/components/ui/use-toast'
 
 export function LoginPage() {
+  const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -22,15 +24,15 @@ export function LoginPage() {
     try {
       await signInWithEmail(email, password)
       toast({
-        title: 'Welcome back!',
-        description: 'You have successfully signed in.',
+        title: t('auth.welcomeBackToast'),
+        description: t('auth.signInSuccess'),
       })
       navigate('/')
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Invalid email or password',
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : t('auth.invalidCredentials'),
       })
     } finally {
       setIsLoading(false)
@@ -42,17 +44,17 @@ export function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
-            Welcome back
+            {t('auth.welcomeBack')}
           </CardTitle>
           <CardDescription className="text-center">
-            Sign in to your account to continue
+            {t('auth.signInToContinue')}
           </CardDescription>
         </CardHeader>
         
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('auth.email')}</Label>
               <Input
                 id="email"
                 type="email"
@@ -64,7 +66,7 @@ export function LoginPage() {
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t('auth.password')}</Label>
               </div>
               <Input
                 id="password"
@@ -75,16 +77,16 @@ export function LoginPage() {
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Signing in...' : 'Sign in'}
+              {isLoading ? t('auth.signingIn') : t('auth.signIn')}
             </Button>
           </form>
         </CardContent>
         
         <CardFooter className="flex justify-center">
           <p className="text-sm text-muted-foreground">
-            Don't have an account?{' '}
+            {t('auth.noAccount')}{' '}
             <Link to="/register" className="text-primary hover:underline font-medium">
-              Sign up
+              {t('auth.signUp')}
             </Link>
           </p>
         </CardFooter>

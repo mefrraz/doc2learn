@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/authStore'
 import { Button } from '@/components/ui/button'
 import { 
@@ -33,6 +34,7 @@ interface Stats {
 }
 
 export function DashboardPage() {
+  const { t } = useTranslation()
   const { user, token } = useAuthStore()
   const [documents, setDocuments] = useState<Document[]>([])
   const [stats, setStats] = useState<Stats>({
@@ -93,17 +95,17 @@ export function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-text-primary">
-            Welcome back, {user?.email?.split('@')[0] || 'User'}!
+            {t('dashboard.welcome', { name: user?.email?.split('@')[0] || 'User' })}
           </h1>
           <p className="text-text-secondary mt-1">
-            Continue your learning journey
+            {t('dashboard.continueLearning')}
           </p>
         </div>
         
         <Link to="/documents">
           <Button className="bg-accent hover:bg-accent-hover text-white gap-2">
             <Plus className="w-4 h-4" />
-            New Document
+            {t('navigation.newDocument')}
           </Button>
         </Link>
       </div>
@@ -122,7 +124,7 @@ export function DashboardPage() {
             </div>
             <div>
               <p className="text-2xl font-semibold text-text-primary">{stats.totalDocuments}</p>
-              <p className="text-sm text-text-muted">Documents</p>
+              <p className="text-sm text-text-muted">{t('dashboard.totalDocuments')}</p>
             </div>
           </div>
         </motion.div>
@@ -139,7 +141,7 @@ export function DashboardPage() {
             </div>
             <div>
               <p className="text-2xl font-semibold text-text-primary">{stats.totalWords.toLocaleString()}</p>
-              <p className="text-sm text-text-muted">Words Learned</p>
+              <p className="text-sm text-text-muted">{t('dashboard.wordsLearned')}</p>
             </div>
           </div>
         </motion.div>
@@ -156,7 +158,7 @@ export function DashboardPage() {
             </div>
             <div>
               <p className="text-2xl font-semibold text-text-primary">{stats.quizzesCompleted}</p>
-              <p className="text-sm text-text-muted">Quizzes Done</p>
+              <p className="text-sm text-text-muted">{t('dashboard.quizzesCompleted')}</p>
             </div>
           </div>
         </motion.div>
@@ -173,7 +175,7 @@ export function DashboardPage() {
             </div>
             <div>
               <p className="text-2xl font-semibold text-text-primary">{stats.streak}</p>
-              <p className="text-sm text-text-muted">Day Streak</p>
+              <p className="text-sm text-text-muted">{t('dashboard.dayStreak')}</p>
             </div>
           </div>
         </motion.div>
@@ -189,14 +191,14 @@ export function DashboardPage() {
         >
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="font-semibold text-lg mb-2">AI Assistant</h3>
+              <h3 className="font-semibold text-lg mb-2">{t('navigation.aiAssistant')}</h3>
               <p className="text-white/80 text-sm mb-4">
-                Ask questions about your documents, get summaries, and generate quizzes
+                {t('dashboard.aiAssistantDesc', 'Ask questions about your documents, get summaries, and generate quizzes')}
               </p>
               <Link to="/chat">
                 <Button variant="secondary" size="sm" className="gap-2">
                   <Sparkles className="w-4 h-4" />
-                  Start Chat
+                  {t('dashboard.startChat', 'Start Chat')}
                 </Button>
               </Link>
             </div>
@@ -212,14 +214,14 @@ export function DashboardPage() {
         >
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="font-semibold text-lg text-text-primary mb-2">Upload PDF</h3>
+              <h3 className="font-semibold text-lg text-text-primary mb-2">{t('dashboard.uploadDocument')}</h3>
               <p className="text-text-secondary text-sm mb-4">
-                Upload a PDF document and start learning with AI-powered tools
+                {t('dashboard.uploadDesc', 'Upload a PDF document and start learning with AI-powered tools')}
               </p>
               <Link to="/documents">
                 <Button variant="outline" size="sm" className="gap-2 border-border text-text-secondary hover:text-text-primary">
                   <Upload className="w-4 h-4" />
-                  Upload
+                  {t('documents.upload')}
                 </Button>
               </Link>
             </div>
@@ -231,12 +233,12 @@ export function DashboardPage() {
       {/* Recent Documents */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-text-primary">Recent Documents</h2>
+          <h2 className="text-lg font-semibold text-text-primary">{t('dashboard.recentDocuments')}</h2>
           <Link 
             to="/documents"
             className="text-sm text-accent hover:underline flex items-center gap-1"
           >
-            View all
+            {t('dashboard.viewAllDocuments')}
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
@@ -248,14 +250,14 @@ export function DashboardPage() {
         ) : recentDocuments.length === 0 ? (
           <div className="text-center py-12 bg-bg-secondary border border-border rounded-xl">
             <FileText className="w-12 h-12 mx-auto text-text-muted mb-4" />
-            <h3 className="font-medium text-text-primary mb-2">No documents yet</h3>
+            <h3 className="font-medium text-text-primary mb-2">{t('dashboard.noDocumentsYet')}</h3>
             <p className="text-text-secondary text-sm mb-4">
-              Upload your first PDF to start learning
+              {t('dashboard.uploadFirst')}
             </p>
             <Link to="/documents">
               <Button className="bg-accent hover:bg-accent-hover text-white">
                 <Plus className="w-4 h-4 mr-2" />
-                Add Document
+                {t('dashboard.uploadFirstButton')}
               </Button>
             </Link>
           </div>

@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/authStore'
 import { 
   FileText, 
@@ -21,12 +22,13 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const location = useLocation()
   const { user, signOut } = useAuthStore()
+  const { t } = useTranslation()
   
   const navItems = [
-    { icon: FileText, label: 'Documents', path: '/documents' },
-    { icon: BookOpen, label: 'Learning', path: '/learn' },
-    { icon: MessageSquare, label: 'AI Chat', path: '/chat' },
-    { icon: Settings, label: 'Settings', path: '/settings' },
+    { icon: FileText, label: t('navigation.documents'), path: '/documents' },
+    { icon: BookOpen, label: t('navigation.learning'), path: '/learn' },
+    { icon: MessageSquare, label: t('navigation.aiChat'), path: '/chat' },
+    { icon: Settings, label: t('navigation.settings'), path: '/settings' },
   ]
   
   const isActive = (path: string) => {
@@ -83,7 +85,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 exit={{ opacity: 0, width: 0 }}
                 className="text-sm font-medium whitespace-nowrap overflow-hidden"
               >
-                New Document
+                {t('navigation.newDocument')}
               </motion.span>
             )}
           </AnimatePresence>
@@ -134,7 +136,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           className={`flex items-center gap-3 px-3 py-2 rounded-lg bg-gradient-to-r from-accent to-purple-600 text-white hover:opacity-90 transition-opacity ${
             collapsed ? 'justify-center' : ''
           }`}
-          title={collapsed ? 'AI Assistant' : undefined}
+          title={collapsed ? t('navigation.aiAssistant') : undefined}
         >
           <Zap className="w-5 h-5 flex-shrink-0" />
           <AnimatePresence mode="wait">
@@ -145,7 +147,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 exit={{ opacity: 0, width: 0 }}
                 className="text-sm font-medium whitespace-nowrap overflow-hidden"
               >
-                AI Assistant
+                {t('navigation.aiAssistant')}
               </motion.span>
             )}
           </AnimatePresence>
@@ -176,7 +178,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   className="text-xs text-text-muted hover:text-error flex items-center gap-1 transition-colors"
                 >
                   <LogOut className="w-3 h-3" />
-                  Sign out
+                  {t('auth.signOut')}
                 </button>
               </motion.div>
             )}

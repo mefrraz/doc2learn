@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/authStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,6 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/components/ui/use-toast'
 
 export function RegisterPage() {
+  const { t } = useTranslation()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -23,8 +25,8 @@ export function RegisterPage() {
     if (password !== confirmPassword) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Passwords do not match',
+        title: t('common.error'),
+        description: t('auth.passwordMismatch'),
       })
       return
     }
@@ -32,8 +34,8 @@ export function RegisterPage() {
     if (password.length < 6) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Password must be at least 6 characters',
+        title: t('common.error'),
+        description: t('auth.passwordMinLength', 'Password must be at least 6 characters'),
       })
       return
     }
@@ -43,15 +45,15 @@ export function RegisterPage() {
     try {
       await signUpWithEmail(email, password, name || undefined)
       toast({
-        title: 'Account created!',
-        description: 'You have successfully registered.',
+        title: t('auth.accountCreated'),
+        description: t('auth.accountCreatedDesc'),
       })
       navigate('/')
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to create account',
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : t('auth.signUpError', 'Failed to create account'),
       })
     } finally {
       setIsLoading(false)
@@ -63,17 +65,17 @@ export function RegisterPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
-            Create an account
+            {t('auth.createAccount')}
           </CardTitle>
           <CardDescription className="text-center">
-            Enter your details to get started
+            {t('auth.getStarted')}
           </CardDescription>
         </CardHeader>
         
         <CardContent className="space-y-4">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name (optional)</Label>
+              <Label htmlFor="name">{t('auth.name', 'Name (optional)')}</Label>
               <Input
                 id="name"
                 type="text"
@@ -83,7 +85,7 @@ export function RegisterPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('auth.email')}</Label>
               <Input
                 id="email"
                 type="email"
@@ -94,7 +96,7 @@ export function RegisterPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('auth.password')}</Label>
               <Input
                 id="password"
                 type="password"
@@ -103,11 +105,11 @@ export function RegisterPage() {
                 required
               />
               <p className="text-xs text-muted-foreground">
-                Must be at least 6 characters
+                {t('auth.passwordHint', 'Must be at least 6 characters')}
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="confirmPassword">{t('auth.confirmPassword')}</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -117,16 +119,16 @@ export function RegisterPage() {
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Creating account...' : 'Create account'}
+              {isLoading ? t('auth.signingUp') : t('auth.createAccount')}
             </Button>
           </form>
         </CardContent>
         
         <CardFooter className="flex justify-center">
           <p className="text-sm text-muted-foreground">
-            Already have an account?{' '}
+            {t('auth.hasAccount')}{' '}
             <Link to="/login" className="text-primary hover:underline font-medium">
-              Sign in
+              {t('auth.signIn')}
             </Link>
           </p>
         </CardFooter>
