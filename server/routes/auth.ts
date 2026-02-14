@@ -10,8 +10,8 @@ const secretKey = new TextEncoder().encode(JWT_SECRET);
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
+  secure: true, // Always true for cross-origin cookies
+  sameSite: 'none' as const, // Required for cross-origin cookies
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };
 
@@ -126,8 +126,8 @@ router.post('/login', async (req, res: Response) => {
 router.post('/logout', (_req, res: Response) => {
   res.clearCookie('auth-token', {
     httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'none',
+    secure: true,
   });
   return res.json({ success: true });
 });
