@@ -4,7 +4,6 @@ import { useAuthStore } from '@/stores/authStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ArrowLeft, Search, BookOpen, X, ChevronDown, ChevronUp } from 'lucide-react'
-import { useToast } from '@/components/ui/use-toast'
 import { apiEndpoint } from '@/lib/config'
 
 interface GlossaryTerm {
@@ -27,7 +26,6 @@ export function GlossaryPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedLetter, setSelectedLetter] = useState<string | null>(null)
   const [expandedTerms, setExpandedTerms] = useState<Set<string>>(new Set())
-  const { toast } = useToast()
 
   useEffect(() => {
     const fetchDocument = async () => {

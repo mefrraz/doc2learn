@@ -7,13 +7,13 @@ import {
   Sparkles, 
   Send, 
   Loader2, 
-  X,
   ChevronLeft,
   ChevronRight,
   Lightbulb
 } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuthStore } from '@/stores/authStore'
+import { apiEndpoint } from '@/lib/config'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -27,8 +27,6 @@ interface AIPanelProps {
   onClose?: () => void
 }
 
-const API_URL = 'http://localhost:3001'
-
 type TabType = 'chat' | 'summarize' | 'quiz' | 'exercises'
 
 const tabs: { id: TabType; label: string; icon: React.ElementType }[] = [
@@ -38,7 +36,7 @@ const tabs: { id: TabType; label: string; icon: React.ElementType }[] = [
   { id: 'exercises', label: 'Exercises', icon: Lightbulb },
 ]
 
-export function AIPanel({ documentId, selectedText, pageContent, onClose }: AIPanelProps) {
+export function AIPanel({ documentId, selectedText, pageContent }: AIPanelProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>('chat')
   const [messages, setMessages] = useState<Message[]>([])
@@ -74,7 +72,7 @@ export function AIPanel({ documentId, selectedText, pageContent, onClose }: AIPa
     setIsLoading(true)
 
     try {
-      const response = await fetch(`${API_URL}/api/ai/documents/${documentId}/chat`, {
+      const response = await fetch(apiEndpoint(`api/ai/documents/${documentId}/chat`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -113,7 +111,7 @@ export function AIPanel({ documentId, selectedText, pageContent, onClose }: AIPa
     setSummary('')
 
     try {
-      const response = await fetch(`${API_URL}/api/ai/documents/${documentId}/summarize`, {
+      const response = await fetch(apiEndpoint(`api/ai/documents/${documentId}/summarize`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -149,7 +147,7 @@ export function AIPanel({ documentId, selectedText, pageContent, onClose }: AIPa
     setQuiz([])
 
     try {
-      const response = await fetch(`${API_URL}/api/ai/documents/${documentId}/quiz`, {
+      const response = await fetch(apiEndpoint(`api/ai/documents/${documentId}/quiz`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -185,7 +183,7 @@ export function AIPanel({ documentId, selectedText, pageContent, onClose }: AIPa
     setExercises([])
 
     try {
-      const response = await fetch(`${API_URL}/api/ai/documents/${documentId}/exercises`, {
+      const response = await fetch(apiEndpoint(`api/ai/documents/${documentId}/exercises`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

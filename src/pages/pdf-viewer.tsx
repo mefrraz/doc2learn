@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { PDFViewer } from '@/components/viewer/PDFViewer'
 import { 
   ArrowLeft, FileText, MessageSquare, Sparkles, BookOpen, 
-  Send, Loader2, Lightbulb, Target, X, Download
+  Send, Loader2, Lightbulb, Target, X
 } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { motion, AnimatePresence } from 'framer-motion'

@@ -7,14 +7,12 @@ import {
   Plus, 
   BookOpen, 
   Target, 
-  Clock,
   TrendingUp,
   ArrowRight,
   Sparkles,
   Upload
 } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { useToast } from '@/components/ui/use-toast'
 import { apiEndpoint } from '@/lib/config'
 
 interface Document {
@@ -44,7 +42,6 @@ export function DashboardPage() {
     streak: 0
   })
   const [isLoading, setIsLoading] = useState(true)
-  const { toast } = useToast()
 
   useEffect(() => {
     const fetchData = async () => {

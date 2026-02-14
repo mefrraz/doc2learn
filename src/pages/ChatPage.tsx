@@ -7,7 +7,6 @@ import {
   Send, 
   Loader2, 
   Sparkles, 
-  FileText,
   Trash2
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'

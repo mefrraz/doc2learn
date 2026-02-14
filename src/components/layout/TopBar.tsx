@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Search, Moon, Sun, Command } from 'lucide-react'
 import { motion } from 'framer-motion'
 
@@ -8,7 +7,6 @@ interface TopBarProps {
 }
 
 export function TopBar({ onSearch }: TopBarProps) {
-  const navigate = useNavigate()
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== 'undefined') {
       return document.documentElement.classList.contains('dark')
