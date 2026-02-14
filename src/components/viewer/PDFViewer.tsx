@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, FileText, Loader2 } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -12,6 +12,7 @@ interface PDFViewerProps {
   file: string | Blob | File
   onTextSelect?: (text: string) => void
   onPageChange?: (page: number, totalPages: number) => void
+  onPageContent?: (content: string, page: number) => void
   className?: string
 }
 
@@ -19,6 +20,7 @@ export function PDFViewer({
   file, 
   onTextSelect, 
   onPageChange,
+  onPageContent,
   className = '' 
 }: PDFViewerProps) {
   const [numPages, setNumPages] = useState<number>(0)
@@ -26,12 +28,44 @@ export function PDFViewer({
   const [scale, setScale] = useState<number>(1.0)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
+  const pdfDocRef = useRef<any>(null)
 
   const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
     setNumPages(numPages)
     setLoading(false)
     onPageChange?.(1, numPages)
+    pdfDocRef.current = null // Will be set when we need to extract text
   }, [onPageChange])
+
+  // Extract text content from current page
+  const extractPageText = useCallback(async (pageNum: number, pdfDoc: any) => {
+    try {
+      const page = await pdfDoc.getPage(pageNum)
+      const textContent = await page.getTextContent()
+      const text = textContent.items
+        .map((item: any) => item.str)
+        .join(' ')
+      return text
+    } catch (error) {
+      console.error('Error extracting page text:', error)
+      return ''
+    }
+  }, [])
+
+  // Handle page change and extract text
+  const handlePageChange = useCallback((page: number, total: number) => {
+    setCurrentPage(page)
+    onPageChange?.(page, total)
+    
+    // Extract text from new page if callback is provided
+    if (onPageContent && pdfDocRef.current) {
+      extractPageText(page, pdfDocRef.current).then(text => {
+        if (text) {
+          onPageContent(text, page)
+        }
+      })
+    }
+  }, [onPageChange, onPageContent, extractPageText])
 
   const onDocumentLoadError = useCallback((error: Error) => {
     console.error('Error loading PDF:', error)
@@ -41,10 +75,9 @@ export function PDFViewer({
 
   const goToPage = useCallback((page: number) => {
     if (page >= 1 && page <= numPages) {
-      setCurrentPage(page)
-      onPageChange?.(page, numPages)
+      handlePageChange(page, numPages)
     }
-  }, [numPages, onPageChange])
+  }, [numPages, handlePageChange])
 
   const zoomIn = useCallback(() => {
     setScale(prev => Math.min(prev + 0.25, 3.0))
@@ -142,7 +175,10 @@ export function PDFViewer({
           
           <Document
             file={file}
-            onLoadSuccess={onDocumentLoadSuccess}
+            onLoadSuccess={(pdf) => {
+              pdfDocRef.current = pdf
+              onDocumentLoadSuccess({ numPages: pdf.numPages })
+            }}
             onLoadError={onDocumentLoadError}
             loading=""
           >

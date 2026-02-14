@@ -41,6 +41,8 @@ export function PDFViewerPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null)
   const [selectedText, setSelectedText] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageContent, setPageContent] = useState('')
   
   // Chat state
   const [showChat, setShowChat] = useState(false)
@@ -117,6 +119,12 @@ export function PDFViewerPage() {
     setSelectedText(text)
   }, [])
 
+  // Handle page content extraction
+  const handlePageContent = useCallback((content: string, page: number) => {
+    setPageContent(content)
+    setCurrentPage(page)
+  }, [])
+
   // Chat with AI
   const handleSendMessage = async () => {
     if (!chatInput.trim() || isChatLoading) return
@@ -137,6 +145,8 @@ export function PDFViewerPage() {
         body: JSON.stringify({
           message: userMessage,
           selectedText,
+          pageContent,
+          pageNumber: currentPage,
         }),
       })
 
@@ -311,6 +321,7 @@ export function PDFViewerPage() {
             <PDFViewer
               file={pdfBlob}
               onTextSelect={handleTextSelect}
+              onPageContent={handlePageContent}
               className="h-full"
             />
           ) : (

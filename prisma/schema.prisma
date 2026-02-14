@@ -32,7 +32,11 @@ model Document {
   fileType    String   // pdf, txt, md
   fileSize    Int
   content     String?  // Extracted text content
-  filePath    String?  // Path to stored file (for PDF viewing)
+  filePath    String?  // Path to stored file (for PDF viewing) - DEPRECATED, use fileUrl
+  
+  // Uploadthing storage
+  fileUrl     String?  // Uploadthing URL for file access
+  fileKey     String?  // Uploadthing key for file management (delete, etc.)
   
   // AI Generated content
   summary     String?  @db.Text

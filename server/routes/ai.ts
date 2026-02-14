@@ -85,7 +85,7 @@ Guidelines:
 router.post('/documents/:id/chat', authenticateToken, requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params as { id: string };
-    const { message, pageContent } = req.body;
+    const { message, pageContent, pageNumber } = req.body;
 
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
@@ -111,10 +111,11 @@ router.post('/documents/:id/chat', authenticateToken, requireAuth, async (req: A
     // Build context from document
     let context = `Document Title: ${document.title}\n\n`;
     if (document.content) {
-      context += `Document Content (excerpt):\n${document.content.slice(0, 5000)}\n\n`;
+      context += `Full Document Content (excerpt):\n${document.content.slice(0, 5000)}\n\n`;
     }
     if (pageContent) {
-      context += `Current Page Content:\n${pageContent}\n\n`;
+      const pageInfo = pageNumber ? ` (currently viewing page ${pageNumber})` : '';
+      context += `Current Page Content${pageInfo}:\n${pageContent}\n\n`;
     }
 
     const systemPrompt = `You are a helpful AI study assistant. You help students understand and learn from educational documents.

@@ -1,13 +1,14 @@
 import { Router, Response } from 'express';
+import path from 'path';
+import fs from 'fs';
 import { prisma } from '../lib/prisma';
 import { authenticateToken, AuthRequest, requireAuth } from '../middleware/auth';
-import { uploadMiddleware, UploadedFile, uploadMemoryMiddleware, UploadedMemoryFile } from '../middleware/upload';
+import { uploadMemoryMiddleware, UploadedMemoryFile } from '../middleware/upload';
 import { parsePDF, truncateText } from '../lib/pdf-parser';
 import { AIService, AIProviderType } from '../lib/ai';
 import { COMBINED_PROMPT, parseAIJsonResponse } from '../lib/prompts';
 import { decrypt } from '../lib/encryption';
-import fs from 'fs';
-import path from 'path';
+import { utapi } from '../lib/uploadthing';
 
 const router = Router();
 
@@ -98,22 +99,43 @@ router.post('/', authenticateToken, requireAuth, async (req: AuthRequest, res: R
 });
 
 // Upload PDF with parsing
-router.post('/upload', authenticateToken, requireAuth, uploadMiddleware.single('file'), async (req: AuthRequest, res: Response) => {
+router.post('/upload', authenticateToken, requireAuth, uploadMemoryMiddleware.single('file'), async (req: AuthRequest, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const file = req.file as UploadedFile;
+    const file = req.file as UploadedMemoryFile;
     const title = req.body.title || file.originalname.replace('.pdf', '');
+
+    // Upload to Uploadthing
+    let fileUrl = '';
+    let fileKey = '';
+    
+    try {
+      const uploadResult = await utapi.uploadFiles([{
+        name: file.originalname,
+        type: file.mimetype,
+        data: file.buffer,
+      }]);
+      
+      if (uploadResult[0].data) {
+        fileUrl = uploadResult[0].data.url;
+        fileKey = uploadResult[0].data.key;
+      } else {
+        throw new Error('Upload failed: No data returned');
+      }
+    } catch (uploadError) {
+      console.error('Uploadthing upload error:', uploadError);
+      return res.status(500).json({ error: 'Failed to upload file to cloud storage' });
+    }
 
     // Parse PDF to extract text
     let extractedText = '';
     let numPages = 0;
     
     try {
-      const fileBuffer = fs.readFileSync(file.path);
-      const parseResult = await parsePDF(fileBuffer);
+      const parseResult = await parsePDF(file.buffer);
       extractedText = truncateText(parseResult.text, 50000); // Limit to 50k characters
       numPages = parseResult.numPages;
     } catch (parseError) {
@@ -121,7 +143,7 @@ router.post('/upload', authenticateToken, requireAuth, uploadMiddleware.single('
       // Continue without text - user can still see the document
     }
 
-    // Create document record with file path
+    // Create document record with Uploadthing URL and key
     const document = await prisma.document.create({
       data: {
         userId: req.user!.id,
@@ -130,7 +152,8 @@ router.post('/upload', authenticateToken, requireAuth, uploadMiddleware.single('
         fileType: 'pdf',
         fileSize: file.size,
         content: extractedText || null,
-        filePath: file.filename, // Store just the filename, not full path
+        fileUrl,
+        fileKey,
       },
     });
 
@@ -201,6 +224,17 @@ router.delete('/:id', authenticateToken, requireAuth, async (req: AuthRequest, r
 
     if (!document) {
       return res.status(404).json({ error: 'Document not found' });
+    }
+
+    // Delete from Uploadthing if fileKey exists
+    if (document.fileKey) {
+      try {
+        await utapi.deleteFiles([document.fileKey]);
+        console.log(`Deleted file from Uploadthing: ${document.fileKey}`);
+      } catch (deleteError) {
+        console.error('Failed to delete file from Uploadthing:', deleteError);
+        // Continue with deletion even if Uploadthing deletion fails
+      }
     }
 
     await prisma.document.delete({
@@ -369,6 +403,13 @@ router.get('/:id/file', authenticateToken, requireAuth, async (req: AuthRequest,
       return res.status(404).json({ error: 'Document not found' });
     }
 
+    // Check for Uploadthing URL (new storage)
+    if (document.fileUrl) {
+      // Redirect to Uploadthing URL for CDN delivery
+      return res.redirect(document.fileUrl);
+    }
+
+    // Fallback to legacy filePath (deprecated - for migration purposes only)
     if (!document.filePath) {
       return res.status(404).json({ error: 'No file associated with this document' });
     }
