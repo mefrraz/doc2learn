@@ -118,11 +118,15 @@ router.post('/upload', authenticateToken, requireAuth, uploadMemoryMiddleware.si
       const fileToUpload = new UTFile([file.buffer], file.originalname);
       const uploadResult = await utapi.uploadFiles([fileToUpload]);
       
-      if (uploadResult[0].data) {
-        fileUrl = uploadResult[0].data.url;
-        fileKey = uploadResult[0].data.key;
+      console.log('Uploadthing response:', JSON.stringify(uploadResult, null, 2));
+      
+      // Response structure is { data: UploadedFileResponse[], error: null }
+      if (uploadResult.data && uploadResult.data[0]) {
+        fileUrl = uploadResult.data[0].url;
+        fileKey = uploadResult.data[0].key;
       } else {
-        throw new Error('Upload failed: No data returned');
+        console.error('Uploadthing error:', uploadResult.error);
+        throw new Error(`Upload failed: ${uploadResult.error?.message || 'No data returned'}`);
       }
     } catch (uploadError) {
       console.error('Uploadthing upload error:', uploadError);
