@@ -1,0 +1,105 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Users table
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  documents     Document[]
+  apiKeys       ApiKey[]
+  progress      LearningProgress[]
+}
+
+// Documents (PDFs, txt, md files)
+model Document {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  filename    String
+  fileType    String   // pdf, txt, md
+  fileSize    Int
+  content     String?  // Extracted text content
+  filePath    String?  // Path to stored file (for PDF viewing)
+  
+  // AI Generated content
+  summary     String?  @db.Text
+  glossary    Json?    // { term: string, definition: string }[]
+  flashcards  Json?    // { front: string, back: string }[]
+  quiz        Json?    // { question: string, options: string[], correct: number }[]
+  concepts    Json?    // { name: string, description: string, related: string[] }[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  progress          DocumentProgress[]
+  learningProgress  LearningProgress[]
+}
+
+// User's API Keys for BYOK
+model ApiKey {
+  id          String   @id @default(cuid())
+  userId      String
+  provider    String   // openai, anthropic, google, groq, etc.
+  keyHash     String   // Hashed version for security
+  keyLast4    String   // Last 4 characters for display
+  name        String?  // User's name for the key
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+}
+
+// Learning Progress
+model LearningProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  documentId  String
+  type        String   // quiz, flashcard, exercise
+  itemId      String   // ID of the specific item (question index, flashcard index)
+  status      String   // not_started, in_progress, completed
+  score       Int?     // For quiz results
+  attempts    Int      @default(0)
+  lastAnswer  String?  // For flashcards: correct, incorrect
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, documentId, type, itemId])
+}
+
+// Document processing status
+model DocumentProgress {
+  id          String   @id @default(cuid())
+  documentId  String
+  stage       String   // extracting, generating_summary, generating_quiz, etc.
+  status      String   // pending, processing, completed, failed
+  progress    Int      @default(0) // 0-100
+  error       String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+}

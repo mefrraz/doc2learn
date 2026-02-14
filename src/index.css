@@ -1,0 +1,378 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light Theme - Warm White */
+    --bg-primary: #FFFBF5;
+    --bg-secondary: #FFFFFF;
+    --bg-tertiary: #F5F0EB;
+    --bg-hover: #EBE6E1;
+    
+    --text-primary: #1A1A1A;
+    --text-secondary: #666666;
+    --text-muted: #999999;
+    --text-inverse: #FFFFFF;
+    
+    --accent: #4F46E5;
+    --accent-hover: #4338CA;
+    --accent-light: #EEF2FF;
+    
+    --border: #E5E0DB;
+    --border-strong: #D4D0CB;
+    
+    --success: #10B981;
+    --success-light: #D1FAE5;
+    --error: #EF4444;
+    --error-light: #FEE2E2;
+    --warning: #F59E0B;
+    --warning-light: #FEF3C7;
+
+    /* Legacy HSL variables for compatibility */
+    --background: 40 33% 98%;
+    --foreground: 0 0% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 20% 94%;
+    --secondary-foreground: 0 0% 10%;
+    --muted: 30 20% 94%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 239 84% 67%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --input: 30 15% 90%;
+    --ring: 239 84% 67%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Dark Theme */
+    --bg-primary: #0F0F0F;
+    --bg-secondary: #1A1A1A;
+    --bg-tertiary: #252525;
+    --bg-hover: #303030;
+    
+    --text-primary: #FAFAFA;
+    --text-secondary: #A0A0A0;
+    --text-muted: #666666;
+    --text-inverse: #0F0F0F;
+    
+    --accent: #6366F1;
+    --accent-hover: #818CF8;
+    --accent-light: #1E1B4B;
+    
+    --border: #333333;
+    --border-strong: #404040;
+    
+    --success: #34D399;
+    --success-light: #064E3B;
+    --error: #F87171;
+    --error-light: #7F1D1D;
+    --warning: #FBBF24;
+    --warning-light: #78350F;
+
+    /* Legacy HSL variables */
+    --background: 0 0% 6%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 64%;
+    --accent: 239 84% 67%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+    --input: 0 0% 20%;
+    --ring: 239 84% 67%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-bg-primary text-text-primary font-sans antialiased;
+  }
+  
+  /* Focus styles */
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-bg-primary;
+  }
+}
+
+/* Glassmorphism */
+@layer components {
+  .glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  
+  .dark .glass {
+    background: rgba(26, 26, 26, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .glass-subtle {
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  
+  .dark .glass-subtle {
+    background: rgba(26, 26, 26, 0.6);
+  }
+}
+
+/* Markdown Content Styles */
+@layer components {
+  .markdown-content {
+    @apply text-text-primary leading-relaxed;
+    font-family: 'Merriweather', Georgia, serif;
+    font-size: 1.125rem;
+  }
+  
+  .markdown-content h1 {
+    @apply text-3xl font-bold mt-8 mb-4;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  .markdown-content h2 {
+    @apply text-2xl font-semibold mt-6 mb-3;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  .markdown-content h3 {
+    @apply text-xl font-medium mt-4 mb-2;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  .markdown-content p {
+    @apply mb-4;
+  }
+  
+  .markdown-content ul,
+  .markdown-content ol {
+    @apply my-4 ml-6;
+  }
+  
+  .markdown-content ul {
+    @apply list-disc;
+  }
+  
+  .markdown-content ol {
+    @apply list-decimal;
+  }
+  
+  .markdown-content li {
+    @apply mb-2;
+  }
+  
+  .markdown-content blockquote {
+    @apply border-l-4 border-accent pl-4 py-2 my-4 rounded-r italic text-text-secondary;
+    background-color: rgba(238, 242, 255, 0.5);
+  }
+  
+  .dark .markdown-content blockquote {
+    background-color: rgba(30, 27, 75, 0.5);
+  }
+  
+  .markdown-content code:not(pre code) {
+    @apply bg-bg-tertiary px-1.5 py-0.5 rounded text-sm font-mono;
+  }
+  
+  .markdown-content pre {
+    @apply my-4 p-4 rounded-lg bg-bg-tertiary overflow-x-auto;
+  }
+  
+  .markdown-content pre code {
+    @apply text-sm font-mono;
+  }
+  
+  .markdown-content table {
+    @apply w-full my-4 border-collapse;
+  }
+  
+  .markdown-content th,
+  .markdown-content td {
+    @apply border border-border px-4 py-2 text-left;
+  }
+  
+  .markdown-content th {
+    @apply bg-bg-tertiary font-medium;
+  }
+  
+  .markdown-content a {
+    @apply text-accent hover:underline;
+  }
+  
+  .markdown-content hr {
+    @apply my-8 border-border;
+  }
+  
+  .markdown-content img {
+    @apply max-w-full h-auto rounded-lg my-4;
+  }
+}
+
+/* PDF Viewer Styles */
+@layer components {
+  .pdf-page {
+    @apply bg-white shadow-lg mx-auto mb-4;
+  }
+  
+  .pdf-controls {
+    @apply flex items-center gap-2 text-sm text-text-secondary;
+  }
+}
+
+/* Custom scrollbar */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 3px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: var(--border-strong);
+  }
+}
+
+/* Animations */
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease-out;
+  }
+  
+  .animate-slide-in {
+    animation: slideIn 0.3s ease-out;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes slideIn {
+    from { 
+      opacity: 0; 
+      transform: translateX(-10px); 
+    }
+    to { 
+      opacity: 1; 
+      transform: translateX(0); 
+    }
+  }
+  
+  @keyframes slideUp {
+    from { 
+      opacity: 0; 
+      transform: translateY(10px); 
+    }
+    to { 
+      opacity: 1; 
+      transform: translateY(0); 
+    }
+  }
+}
+
+/* Syntax Highlighting (for rehype-highlight) */
+@layer utilities {
+  .hljs {
+    @apply bg-bg-tertiary;
+  }
+  
+  .hljs-keyword,
+  .hljs-selector-tag,
+  .hljs-built_in,
+  .hljs-name,
+  .hljs-tag {
+    @apply text-purple-600;
+  }
+  
+  .dark .hljs-keyword,
+  .dark .hljs-selector-tag,
+  .dark .hljs-built_in,
+  .dark .hljs-name,
+  .dark .hljs-tag {
+    @apply text-purple-400;
+  }
+  
+  .hljs-string,
+  .hljs-title,
+  .hljs-section,
+  .hljs-attribute,
+  .hljs-literal,
+  .hljs-template-tag,
+  .hljs-template-variable,
+  .hljs-type {
+    @apply text-green-600;
+  }
+  
+  .dark .hljs-string,
+  .dark .hljs-title,
+  .dark .hljs-section,
+  .dark .hljs-attribute,
+  .dark .hljs-literal,
+  .dark .hljs-template-tag,
+  .dark .hljs-template-variable,
+  .dark .hljs-type {
+    @apply text-green-400;
+  }
+  
+  .hljs-comment,
+  .hljs-deletion {
+    @apply text-gray-500 italic;
+  }
+  
+  .hljs-number {
+    @apply text-orange-600;
+  }
+  
+  .dark .hljs-number {
+    @apply text-orange-400;
+  }
+  
+  .hljs-function {
+    @apply text-blue-600;
+  }
+  
+  .dark .hljs-function {
+    @apply text-blue-400;
+  }
+}
