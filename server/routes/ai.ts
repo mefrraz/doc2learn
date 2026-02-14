@@ -1,9 +1,29 @@
 import { Router, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { authenticateToken, AuthRequest, requireAuth } from '../middleware/auth';
-import { AIService, AIMessage } from '../lib/ai';
+import { AIService, AIMessage, AIProviderType } from '../lib/ai';
+import { decrypt } from '../lib/encryption';
 
 const router = Router();
+
+// Helper to get user's API keys
+async function getUserApiKeys(userId: string): Promise<Partial<Record<AIProviderType, string>>> {
+  const userApiKeys = await prisma.apiKey.findMany({
+    where: { userId, isActive: true },
+  });
+
+  const userKeys: Partial<Record<AIProviderType, string>> = {};
+  for (const apiKey of userApiKeys) {
+    try {
+      const decryptedKey = decrypt(apiKey.keyHash);
+      userKeys[apiKey.provider as AIProviderType] = decryptedKey;
+    } catch (error) {
+      console.error(`Failed to decrypt key for provider ${apiKey.provider}:`, error);
+    }
+  }
+
+  return userKeys;
+}
 
 // General chat endpoint (no document context)
 router.post('/chat', authenticateToken, requireAuth, async (req: AuthRequest, res: Response) => {
@@ -14,7 +34,13 @@ router.post('/chat', authenticateToken, requireAuth, async (req: AuthRequest, re
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    const aiService = new AIService({});
+    // Get user's API keys
+    const userKeys = await getUserApiKeys(req.user!.id);
+    if (Object.keys(userKeys).length === 0) {
+      return res.status(400).json({ error: 'No API keys configured. Please add your API key in Settings.' });
+    }
+
+    const aiService = new AIService({ userKeys });
 
     const systemPrompt = `You are a helpful AI study assistant for Doc2Learn. You help students learn and understand various topics.
 
@@ -74,7 +100,13 @@ router.post('/documents/:id/chat', authenticateToken, requireAuth, async (req: A
       return res.status(404).json({ error: 'Document not found' });
     }
 
-    const aiService = new AIService({});
+    // Get user's API keys
+    const userKeys = await getUserApiKeys(req.user!.id);
+    if (Object.keys(userKeys).length === 0) {
+      return res.status(400).json({ error: 'No API keys configured. Please add your API key in Settings.' });
+    }
+
+    const aiService = new AIService({ userKeys });
 
     // Build context from document
     let context = `Document Title: ${document.title}\n\n`;
@@ -131,7 +163,13 @@ router.post('/documents/:id/summarize', authenticateToken, requireAuth, async (r
       return res.status(404).json({ error: 'Document not found' });
     }
 
-    const aiService = new AIService({});
+    // Get user's API keys
+    const userKeys = await getUserApiKeys(req.user!.id);
+    if (Object.keys(userKeys).length === 0) {
+      return res.status(400).json({ error: 'No API keys configured. Please add your API key in Settings.' });
+    }
+
+    const aiService = new AIService({ userKeys });
 
     const systemPrompt = `You are an expert educator. Create a clear, concise summary of the provided content.
 
@@ -176,7 +214,13 @@ router.post('/documents/:id/explain', authenticateToken, requireAuth, async (req
       return res.status(404).json({ error: 'Document not found' });
     }
 
-    const aiService = new AIService({});
+    // Get user's API keys
+    const userKeys = await getUserApiKeys(req.user!.id);
+    if (Object.keys(userKeys).length === 0) {
+      return res.status(400).json({ error: 'No API keys configured. Please add your API key in Settings.' });
+    }
+
+    const aiService = new AIService({ userKeys });
 
     const systemPrompt = `You are an expert educator. Explain the provided concept or term clearly and thoroughly.
 
@@ -222,7 +266,13 @@ router.post('/documents/:id/exercises', authenticateToken, requireAuth, async (r
       return res.status(404).json({ error: 'Document not found' });
     }
 
-    const aiService = new AIService({});
+    // Get user's API keys
+    const userKeys = await getUserApiKeys(req.user!.id);
+    if (Object.keys(userKeys).length === 0) {
+      return res.status(400).json({ error: 'No API keys configured. Please add your API key in Settings.' });
+    }
+
+    const aiService = new AIService({ userKeys });
 
     const systemPrompt = `You are an expert educator. Generate practice exercises based on the provided content.
 

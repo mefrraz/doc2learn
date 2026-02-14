@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
-import { hash } from 'bcryptjs';
 import { prisma } from '../lib/prisma';
 import { authenticateToken, AuthRequest, requireAuth } from '../middleware/auth';
+import { encrypt, decrypt } from '../lib/encryption';
 
 const router = Router();
 
@@ -47,8 +47,8 @@ router.post('/', authenticateToken, requireAuth, async (req: AuthRequest, res: R
     // Get last 4 characters for display
     const keyLast4 = key.slice(-4);
 
-    // Hash the key for storage
-    const keyHash = await hash(key, 12);
+    // Encrypt the key for storage (reversible, unlike hash)
+    const keyHash = encrypt(key);
 
     // Upsert the API key
     const apiKey = await prisma.apiKey.upsert({

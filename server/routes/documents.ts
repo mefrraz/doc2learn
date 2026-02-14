@@ -5,6 +5,7 @@ import { uploadMiddleware, UploadedFile, uploadMemoryMiddleware, UploadedMemoryF
 import { parsePDF, truncateText } from '../lib/pdf-parser';
 import { AIService, AIProviderType } from '../lib/ai';
 import { COMBINED_PROMPT, parseAIJsonResponse } from '../lib/prompts';
+import { decrypt } from '../lib/encryption';
 import fs from 'fs';
 import path from 'path';
 
@@ -231,42 +232,36 @@ router.post('/:id/generate', authenticateToken, requireAuth, async (req: AuthReq
       return res.status(400).json({ error: 'Document has no content to process' });
     }
 
-    // Check if user has any API keys configured (just for UI indication)
+    // Get user's API keys from database
     const userApiKeys = await prisma.apiKey.findMany({
       where: { userId: req.user!.id, isActive: true },
     });
 
-    // Build API keys from environment variables
-    // In production, you'd decrypt the stored keys
-    const envKeys: Partial<Record<AIProviderType, string>> = {
-      openai: process.env.OPENAI_API_KEY,
-      anthropic: process.env.ANTHROPIC_API_KEY,
-      google: process.env.GOOGLE_API_KEY,
-      groq: process.env.GROQ_API_KEY,
-    };
-
-    // Filter out undefined keys
-    const availableKeys: Partial<Record<AIProviderType, string>> = {};
-    for (const [provider, key] of Object.entries(envKeys)) {
-      if (key && key.length > 0) {
-        availableKeys[provider as AIProviderType] = key;
+    // Decrypt user's API keys
+    const userKeys: Partial<Record<AIProviderType, string>> = {};
+    for (const apiKey of userApiKeys) {
+      try {
+        const decryptedKey = decrypt(apiKey.keyHash);
+        userKeys[apiKey.provider as AIProviderType] = decryptedKey;
+      } catch (error) {
+        console.error(`Failed to decrypt key for provider ${apiKey.provider}:`, error);
       }
     }
 
-    if (Object.keys(availableKeys).length === 0) {
+    if (Object.keys(userKeys).length === 0) {
       return res.status(400).json({ 
-        error: 'No API keys configured. Please add your API key to the .env file (OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, or GROQ_API_KEY).' 
+        error: 'No API keys configured. Please add your API key in Settings.' 
       });
     }
 
-    // Create AI service with environment keys
-    const aiService = new AIService({ userKeys: availableKeys });
+    // Create AI service with user's keys
+    const aiService = new AIService({ userKeys });
 
     // Check if provider is available
     const hasProvider = await aiService.hasAvailableProvider();
     if (!hasProvider) {
       return res.status(400).json({ 
-        error: 'No AI provider available. Please check your API keys in .env file.' 
+        error: 'No AI provider available. Please check your API keys in Settings.' 
       });
     }
 
