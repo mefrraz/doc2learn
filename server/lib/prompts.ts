@@ -1,8 +1,8 @@
 // Prompt templates for AI content generation
 
 export interface PromptTemplate {
-  system: string;
-  user: (content: string, options?: Record<string, unknown>) => string;
+  system: string | ((language?: string) => string);
+  user: (content: string, language?: string) => string;
 }
 
 /**
@@ -81,8 +81,8 @@ Guidelines:
 - Include context in answers when helpful
 - Create 20-30 flashcards for comprehensive coverage
 - Return flashcards as a valid JSON array`,
-  user: (content: string, options?: { count?: number }) => {
-    const count = options?.count || 25;
+  user: (content: string, language?: string) => {
+    const count = 25;
     return `Create ${count} flashcards from the following document content. Each flashcard should have a clear question or prompt on the front and a detailed, informative answer on the back.
 
 Document content:
@@ -108,8 +108,8 @@ Guidelines:
 - Vary question difficulty (easy, medium, hard)
 - Cover different aspects of the material
 - Return the quiz as a valid JSON array`,
-  user: (content: string, options?: { count?: number }) => {
-    const count = options?.count || 10;
+  user: (content: string, language?: string) => {
+    const count = 10;
     return `Create ${count} multiple-choice quiz questions from the following document content. Each question should have 4 options with one correct answer.
 
 Document content:
@@ -150,7 +150,11 @@ Return ONLY the JSON array, no additional text.`,
  * Combined generation prompt (for efficiency)
  */
 export const COMBINED_PROMPT: PromptTemplate = {
-  system: `You are an expert educator AI assistant. Your task is to generate COMPREHENSIVE and DETAILED learning materials from document content.
+  system: (language: string = 'English') => `You are an expert educator AI assistant. Your task is to generate COMPREHENSIVE and DETAILED learning materials from document content.
+
+IMPORTANT - LANGUAGE REQUIREMENT:
+- You MUST respond ONLY in ${language} language
+- All content, including summaries, definitions, and quiz questions must be in ${language}
 
 You will generate:
 1. A DETAILED summary (1500-2500 words) in markdown format

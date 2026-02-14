@@ -85,7 +85,7 @@ Guidelines:
 router.post('/documents/:id/chat', authenticateToken, requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params as { id: string };
-    const { message, pageContent, pageNumber } = req.body;
+    const { message, pageContent, pageNumber, language } = req.body;
 
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
@@ -108,6 +108,11 @@ router.post('/documents/:id/chat', authenticateToken, requireAuth, async (req: A
 
     const aiService = new AIService({ userKeys });
 
+    // Build language instruction
+    const languageInstruction = language 
+      ? `You should respond in ${language} language.` 
+      : 'Respond in English by default.';
+
     // Build context from document
     let context = `Document Title: ${document.title}\n\n`;
     if (document.content) {
@@ -126,6 +131,7 @@ Your role:
 - Provide examples when helpful
 - Encourage learning and critical thinking
 - If asked about something not in the document, say so honestly
+- ${languageInstruction}
 
 Context from the document:
 ${context}
@@ -172,6 +178,10 @@ router.post('/documents/:id/summarize', authenticateToken, requireAuth, async (r
 
     const aiService = new AIService({ userKeys });
 
+    // Get language preference from request
+    const language = req.body.language || 'English';
+    const languageInstruction = `You should respond in ${language} language.`;
+
     const systemPrompt = `You are an expert educator. Create a clear, concise summary of the provided content.
 
 Guidelines:
@@ -179,7 +189,8 @@ Guidelines:
 - Use bullet points for clarity
 - Highlight important terms or concepts
 - Keep it educational and easy to understand
-- Aim for 150-250 words`;
+- Aim for 150-250 words
+- ${languageInstruction}`;
 
     const userPrompt = `Please summarize the following content:\n\n${content}`;
 
@@ -223,6 +234,10 @@ router.post('/documents/:id/explain', authenticateToken, requireAuth, async (req
 
     const aiService = new AIService({ userKeys });
 
+    // Get language preference from request
+    const language = req.body.language || 'English';
+    const languageInstruction = `You should respond in ${language} language.`;
+
     const systemPrompt = `You are an expert educator. Explain the provided concept or term clearly and thoroughly.
 
 Guidelines:
@@ -231,7 +246,8 @@ Guidelines:
 - Give examples when relevant
 - Explain why it's important
 - Connect to related concepts if applicable
-- Use analogies to make complex ideas easier to understand`;
+- Use analogies to make complex ideas easier to understand
+- ${languageInstruction}`;
 
     const userPrompt = `Please explain the following concept:\n\n"${text}"\n\n${context ? `Context from document:\n${context}` : ''}`;
 
@@ -275,6 +291,10 @@ router.post('/documents/:id/exercises', authenticateToken, requireAuth, async (r
 
     const aiService = new AIService({ userKeys });
 
+    // Get language preference from request
+    const language = req.body.language || 'English';
+    const languageInstruction = `You should respond in ${language} language.`;
+
     const systemPrompt = `You are an expert educator. Generate practice exercises based on the provided content.
 
 Guidelines:
@@ -282,7 +302,8 @@ Guidelines:
 - Include different types: multiple choice, fill-in-the-blank, short answer
 - Make exercises educational and relevant
 - Provide correct answers for each exercise
-- Return as valid JSON`;
+- Return as valid JSON
+- ${languageInstruction}`;
 
     const userPrompt = `Generate practice exercises based on the following content:\n\n${content || `Topic: ${topic}`}
 

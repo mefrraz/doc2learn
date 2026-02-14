@@ -125,6 +125,12 @@ export function PDFViewerPage() {
     setCurrentPage(page)
   }, [])
 
+  // Get user's language preference
+  const getLanguagePreference = () => {
+    const lang = localStorage.getItem('i18nextLng') || 'en'
+    return lang === 'pt-PT' ? 'Portuguese' : 'English'
+  }
+
   // Chat with AI
   const handleSendMessage = async () => {
     if (!chatInput.trim() || isChatLoading) return
@@ -147,6 +153,7 @@ export function PDFViewerPage() {
           selectedText,
           pageContent,
           pageNumber: currentPage,
+          language: getLanguagePreference(),
         }),
       })
 
@@ -183,6 +190,10 @@ export function PDFViewerPage() {
           'Authorization': `Bearer ${token}`,
         },
         credentials: 'include',
+        body: JSON.stringify({
+          content: document?.content,
+          language: getLanguagePreference(),
+        }),
       })
 
       const data = await response.json()
@@ -220,6 +231,10 @@ export function PDFViewerPage() {
           'Authorization': `Bearer ${token}`,
         },
         credentials: 'include',
+        body: JSON.stringify({
+          content: document?.content,
+          language: getLanguagePreference(),
+        }),
       })
 
       const data = await response.json()
