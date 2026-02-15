@@ -9,6 +9,7 @@ import { AIService, AIProviderType } from '../lib/ai';
 import { COMBINED_PROMPT, parseAIJsonResponse } from '../lib/prompts';
 import { decrypt } from '../lib/encryption';
 import { utapi } from '../lib/uploadthing';
+import { UTFile } from 'uploadthing/server';
 
 const router = Router();
 
@@ -121,12 +122,13 @@ router.post('/upload', authenticateToken, requireAuth, uploadMemoryMiddleware.si
         bufferLength: file.buffer.length
       });
       
-      // Use native File API (Node.js 20+) instead of UTFile
-      // UTFile has issues serializing binary data in Node.js environment
-      const fileObject = new File([file.buffer], file.originalname, { 
+      // Use UTFile from uploadthing/server for proper server-side uploads
+      // Convert Buffer to Uint8Array for proper BlobPart compatibility
+      const uint8Array = new Uint8Array(file.buffer);
+      const fileToUpload = new UTFile([uint8Array], file.originalname, { 
         type: file.mimetype 
       });
-      const uploadResult = await utapi.uploadFiles([fileObject]);
+      const uploadResult = await utapi.uploadFiles([fileToUpload]);
       
       console.log('Uploadthing response:', JSON.stringify(uploadResult, null, 2));
       
