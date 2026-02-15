@@ -96,7 +96,7 @@ export function PDFToolbar({
   }, [currentPage, totalPages, onPageChange, viewMode])
 
   return (
-    <div className={`flex items-center justify-between px-4 py-2 bg-bg-secondary border-b border-border ${className}`}>
+    <div className={`h-12 flex items-center justify-between px-4 bg-bg-secondary border-b border-border ${className}`}>
       {/* Left: Page Navigation */}
       <div className="flex items-center gap-1">
         {/* First/Last Page */}

@@ -2,15 +2,18 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { PDFViewer } from '@/components/viewer/PDFViewer'
+import { PageSelector } from '@/components/viewer/PageSelector'
 import { ResizablePanel } from '@/components/ui/resizable'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
+import { Textarea } from '@/components/ui/textarea'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { 
-  ArrowLeft, FileText, MessageSquare, Send, Loader2, X
+  ArrowLeft, FileText, MessageSquare, Send, Loader2, X, 
+  Layers, ChevronDown, ChevronUp
 } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
-import { AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { apiEndpoint } from '@/lib/config'
 
 interface Document {
@@ -31,6 +34,8 @@ interface ChatMessage {
   selectedPages?: number[]
 }
 
+const MAX_SELECTED_PAGES = 5
+
 export function PDFViewerPage() {
   const { id } = useParams<{ id: string }>()
   const { token } = useAuthStore()
@@ -40,6 +45,7 @@ export function PDFViewerPage() {
   const [selectedText, setSelectedText] = useState('')
   const [totalPages, setTotalPages] = useState(0)
   const [selectedPages, setSelectedPages] = useState<number[]>([])
+  const [showPageSelector, setShowPageSelector] = useState(false)
   
   // Page context - combined to avoid race conditions
   const [pageContext, setPageContext] = useState<{
@@ -53,7 +59,7 @@ export function PDFViewerPage() {
   const [chatInput, setChatInput] = useState('')
   const [isChatLoading, setIsChatLoading] = useState(false)
   
-  // Ref for auto-scrolling chat
+  // Refs
   const chatMessagesRef = useRef<HTMLDivElement>(null)
   
   const { toast } = useToast()
@@ -208,13 +214,23 @@ export function PDFViewerPage() {
     }
   }
 
-  // Handle Enter key in chat input
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  // Handle Enter key in chat input (Shift+Enter for new line)
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSendMessage()
     }
   }
+
+  // Handle page selection
+  const handlePageSelectionChange = useCallback((pages: number[]) => {
+    setSelectedPages(pages.slice(0, MAX_SELECTED_PAGES))
+  }, [])
+
+  // Clear page selection
+  const clearPageSelection = useCallback(() => {
+    setSelectedPages([])
+  }, [])
 
   if (isLoading) {
     return (
@@ -245,31 +261,32 @@ export function PDFViewerPage() {
 
   return (
     <div className="h-screen flex flex-col bg-bg-primary">
-      {/* Header */}
-      <div className="border-b border-border bg-bg-secondary px-4 py-3 flex items-center justify-between">
+      {/* Header - Fixed height h-12 */}
+      <div className="h-12 border-b border-border bg-bg-secondary px-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link to={`/documents/${id}`}>
-            <Button variant="ghost" size="sm" className="text-text-secondary hover:text-text-primary">
+            <Button variant="ghost" size="sm" className="text-text-secondary hover:text-text-primary h-8">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
           </Link>
           <div className="h-4 w-px bg-border" />
-          <div>
-            <h1 className="font-medium text-text-primary truncate max-w-md">{document.title}</h1>
-            <p className="text-xs text-text-muted">{document.filename}</p>
+          <div className="max-w-md">
+            <h1 className="font-medium text-text-primary truncate text-sm">{document.title}</h1>
+            <p className="text-xs text-text-muted truncate">{document.filename}</p>
           </div>
         </div>
         
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <Button 
             variant="outline" 
             size="sm" 
-            className="text-text-secondary hover:text-text-primary"
+            className="text-text-secondary hover:text-text-primary h-8"
             onClick={() => setShowChat(!showChat)}
           >
             <MessageSquare className="w-4 h-4 mr-2" />
-            {showChat ? 'Hide Chat' : 'Chat'}
+            {showChat ? 'Hide' : 'Chat'}
           </Button>
         </div>
       </div>
@@ -277,7 +294,7 @@ export function PDFViewerPage() {
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
         {/* PDF Viewer */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden">
           {pdfBlob ? (
             <PDFViewer
               file={pdfBlob}
@@ -285,11 +302,11 @@ export function PDFViewerPage() {
               onPageContent={handlePageContent}
               onPageChange={handlePageChange}
               selectedPages={selectedPages}
-              onSelectedPagesChange={setSelectedPages}
-              className="h-full"
+              onSelectedPagesChange={handlePageSelectionChange}
+              className="flex-1"
             />
           ) : (
-            <div className="h-full flex flex-col items-center justify-center p-8 bg-bg-tertiary">
+            <div className="flex-1 flex flex-col items-center justify-center p-8 bg-bg-tertiary">
               <FileText className="w-16 h-16 text-text-muted mb-4" />
               <h3 className="text-lg font-medium text-text-primary mb-2">No PDF File</h3>
               <p className="text-text-secondary text-center max-w-md mb-4">
@@ -307,6 +324,77 @@ export function PDFViewerPage() {
               )}
             </div>
           )}
+          
+          {/* Status Bar - Fixed height h-12, aligned with toolbar */}
+          <div className="h-12 border-t border-border bg-bg-secondary px-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {/* Page Selection Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-text-secondary hover:text-text-primary"
+                onClick={() => setShowPageSelector(!showPageSelector)}
+              >
+                <Layers className="w-4 h-4 mr-2" />
+                Select Pages
+                {selectedPages.length > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 bg-accent text-white text-xs rounded-full">
+                    {selectedPages.length}
+                  </span>
+                )}
+                {showPageSelector ? (
+                  <ChevronUp className="w-3 h-3 ml-1" />
+                ) : (
+                  <ChevronDown className="w-3 h-3 ml-1" />
+                )}
+              </Button>
+              
+              {/* Selected Pages Display */}
+              {selectedPages.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-text-muted">
+                    Pages: {selectedPages.join(', ')}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs text-text-muted hover:text-text-primary"
+                    onClick={clearPageSelection}
+                  >
+                    Clear
+                  </Button>
+                </div>
+              )}
+            </div>
+            
+            {/* Page Indicator */}
+            <div className="text-sm text-text-muted">
+              Page {pageContext?.pageNumber || 1} of {totalPages || '?'}
+            </div>
+          </div>
+          
+          {/* Page Selector Dropdown */}
+          <AnimatePresence>
+            {showPageSelector && pdfBlob && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="border-t border-border bg-bg-secondary overflow-hidden"
+                style={{ maxHeight: '300px' }}
+              >
+                <PageSelector
+                  file={pdfBlob}
+                  totalPages={totalPages}
+                  selectedPages={selectedPages}
+                  onSelectedPagesChange={handlePageSelectionChange}
+                  maxPages={MAX_SELECTED_PAGES}
+                  onClose={() => setShowPageSelector(false)}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Chat Sidebar */}
@@ -319,13 +407,15 @@ export function PDFViewerPage() {
               side="right"
               className="border-l border-border bg-bg-secondary flex flex-col"
             >
-              {/* Chat Header */}
-              <div className="p-4 border-b border-border flex items-center justify-between">
+              {/* Chat Header - Fixed height h-12 */}
+              <div className="h-12 px-4 border-b border-border flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-medium text-text-primary">Chat</h3>
                   <p className="text-xs text-text-muted">
-                    Page {pageContext?.pageNumber || 1} of {totalPages || '?'}
-                    {selectedPages.length > 0 && ` • ${selectedPages.length} pages selected`}
+                    {selectedPages.length > 0 
+                      ? `${selectedPages.length} pages selected`
+                      : `Page ${pageContext?.pageNumber || 1}`
+                    }
                   </p>
                 </div>
                 <Button 
@@ -360,7 +450,6 @@ export function PDFViewerPage() {
               <div 
                 ref={chatMessagesRef}
                 className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0"
-                style={{ maxHeight: 'calc(100vh - 250px)' }}
               >
                 {chatMessages.length === 0 && (
                   <div className="text-center py-8">
@@ -384,11 +473,11 @@ export function PDFViewerPage() {
                           : 'bg-bg-tertiary text-text-primary'
                       }`}
                     >
-                      {message.role === 'user' && message.pageNumber && (
+                      {message.role === 'user' && (message.pageNumber || message.selectedPages) && (
                         <div className="text-xs opacity-70 mb-1">
-                          Page {message.pageNumber}
-                          {message.selectedPages && message.selectedPages.length > 0 && 
-                            ` • Pages: ${message.selectedPages.join(', ')}`
+                          {message.selectedPages && message.selectedPages.length > 0 
+                            ? `Pages: ${message.selectedPages.join(', ')}`
+                            : message.pageNumber && `Page ${message.pageNumber}`
                           }
                         </div>
                       )}
@@ -410,21 +499,23 @@ export function PDFViewerPage() {
                 )}
               </div>
 
-              {/* Chat Input - Fixed at bottom */}
+              {/* Chat Input - Fixed at bottom with multiline textarea */}
               <div className="p-4 border-t border-border bg-bg-secondary">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder={`Ask about page ${pageContext?.pageNumber || 1}...`}
+                <div className="flex gap-2 items-end">
+                  <Textarea
+                    placeholder={`Ask about ${selectedPages.length > 0 ? `${selectedPages.length} selected pages` : `page ${pageContext?.pageNumber || 1}`}...`}
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    className="border-border bg-bg-tertiary flex-1"
                     disabled={isChatLoading}
+                    maxRows={15}
+                    minRows={1}
+                    className="flex-1"
                   />
                   <Button
                     onClick={handleSendMessage}
                     disabled={!chatInput.trim() || isChatLoading}
-                    className="bg-accent hover:bg-accent-hover text-white px-4"
+                    className="bg-accent hover:bg-accent-hover text-white px-4 h-10 flex-shrink-0"
                   >
                     {isChatLoading ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -434,8 +525,7 @@ export function PDFViewerPage() {
                   </Button>
                 </div>
                 <p className="text-xs text-text-muted mt-2">
-                  Press Enter to send • Context: Page {pageContext?.pageNumber || 1}
-                  {selectedPages.length > 0 && ` + ${selectedPages.length} selected`}
+                  Enter to send • Shift+Enter for new line
                 </p>
               </div>
             </ResizablePanel>
