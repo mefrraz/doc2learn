@@ -1,11 +1,11 @@
 import { useCallback, useEffect } from 'react'
 import { 
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-  ZoomIn, ZoomOut, Columns, FileText, Maximize2
+  ZoomIn, ZoomOut, Columns, FileText, Maximize2, BookOpen
 } from 'lucide-react'
 import { PageJumpInput } from './PageJumpInput'
 
-export type ViewMode = 'single' | 'continuous'
+export type ViewMode = 'single' | 'continuous' | 'spread'
 
 interface PDFToolbarProps {
   currentPage: number
@@ -85,11 +85,15 @@ export function PDFToolbar({
   const goToFirstPage = useCallback(() => onPageChange(1), [onPageChange])
   const goToLastPage = useCallback(() => onPageChange(totalPages), [onPageChange, totalPages])
   const goToPrevPage = useCallback(() => {
-    if (currentPage > 1) onPageChange(currentPage - 1)
-  }, [currentPage, onPageChange])
+    // In spread mode, go back 2 pages
+    const step = viewMode === 'spread' ? 2 : 1
+    if (currentPage > 1) onPageChange(Math.max(1, currentPage - step))
+  }, [currentPage, onPageChange, viewMode])
   const goToNextPage = useCallback(() => {
-    if (currentPage < totalPages) onPageChange(currentPage + 1)
-  }, [currentPage, totalPages, onPageChange])
+    // In spread mode, go forward 2 pages
+    const step = viewMode === 'spread' ? 2 : 1
+    if (currentPage < totalPages) onPageChange(Math.min(totalPages, currentPage + step))
+  }, [currentPage, totalPages, onPageChange, viewMode])
 
   return (
     <div className={`flex items-center justify-between px-4 py-2 bg-bg-secondary border-b border-border ${className}`}>
@@ -160,6 +164,17 @@ export function PDFToolbar({
           title="Single page view"
         >
           <FileText className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => onViewModeChange('spread')}
+          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            viewMode === 'spread'
+              ? 'bg-accent text-white'
+              : 'text-text-secondary hover:text-text-primary'
+          }`}
+          title="Two-page spread view"
+        >
+          <BookOpen className="w-4 h-4" />
         </button>
         <button
           onClick={() => onViewModeChange('continuous')}

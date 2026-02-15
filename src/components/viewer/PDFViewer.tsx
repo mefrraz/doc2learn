@@ -46,7 +46,7 @@ export function PDFViewer({
   // Load view mode preference from localStorage
   useEffect(() => {
     const savedViewMode = localStorage.getItem('pdf-view-mode') as ViewMode | null
-    if (savedViewMode && (savedViewMode === 'single' || savedViewMode === 'continuous')) {
+    if (savedViewMode && ['single', 'continuous', 'spread'].includes(savedViewMode)) {
       setViewMode(savedViewMode)
     }
   }, [])
@@ -91,20 +91,26 @@ export function PDFViewer({
 
   // Handle page change
   const handlePageChange = useCallback((page: number) => {
-    if (page >= 1 && page <= numPages) {
-      setCurrentPage(page)
-      onPageChange?.(page, numPages)
+    // In spread mode, ensure we're on an odd page (left side of spread)
+    let targetPage = page
+    if (viewMode === 'spread' && page % 2 === 0 && page > 1) {
+      targetPage = page - 1
+    }
+    
+    if (targetPage >= 1 && targetPage <= numPages) {
+      setCurrentPage(targetPage)
+      onPageChange?.(targetPage, numPages)
       
       // Extract text from new page if callback is provided
       if (onPageContent && pdfDocRef.current) {
-        extractPageText(page).then(text => {
+        extractPageText(targetPage).then(text => {
           if (text) {
-            onPageContent(text, page)
+            onPageContent(text, targetPage)
           }
         })
       }
     }
-  }, [numPages, onPageChange, onPageContent, extractPageText])
+  }, [numPages, onPageChange, onPageContent, extractPageText, viewMode])
 
   // Zoom controls
   const zoomIn = useCallback(() => {
@@ -185,6 +191,65 @@ export function PDFViewer({
           onLoadError={onDocumentLoadError}
           className="flex-1"
         />
+      ) : viewMode === 'spread' ? (
+        // Two-Page Spread View
+        <div 
+          ref={singlePageContainerRef}
+          className="flex-1 overflow-auto bg-bg-tertiary p-4 scrollbar-thin"
+          onMouseUp={handleMouseUp}
+        >
+          <div className="flex justify-center min-h-full gap-2">
+            {loading && (
+              <div className="flex flex-col items-center justify-center py-16">
+                <Loader2 className="w-8 h-8 animate-spin text-accent mb-4" />
+                <p className="text-text-secondary">Loading PDF...</p>
+              </div>
+            )}
+            
+            <Document
+              file={file}
+              onLoadSuccess={onDocumentLoadSuccess}
+              onLoadError={onDocumentLoadError}
+              loading=""
+            >
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: loading ? 0 : 1 }}
+                transition={{ duration: 0.3 }}
+                className="flex items-center justify-center min-h-full gap-2"
+              >
+                {/* Left page (odd page number) */}
+                <Page
+                  pageNumber={currentPage}
+                  scale={scale}
+                  className="shadow-lg"
+                  renderTextLayer={true}
+                  renderAnnotationLayer={true}
+                  loading={
+                    <div className="flex items-center justify-center w-[600px] h-[800px] bg-bg-secondary rounded">
+                      <Loader2 className="w-6 h-6 animate-spin text-accent" />
+                    </div>
+                  }
+                />
+                {/* Right page (even page number) - only show if exists */}
+                {currentPage + 1 <= numPages && (
+                  <Page
+                    pageNumber={currentPage + 1}
+                    scale={scale}
+                    className="shadow-lg"
+                    renderTextLayer={true}
+                    renderAnnotationLayer={true}
+                    loading={
+                      <div className="flex items-center justify-center w-[600px] h-[800px] bg-bg-secondary rounded">
+                        <Loader2 className="w-6 h-6 animate-spin text-accent" />
+                      </div>
+                    }
+                  />
+                )}
+              </motion.div>
+            </Document>
+          </div>
+        </div>
       ) : (
         // Single Page View
         <div 

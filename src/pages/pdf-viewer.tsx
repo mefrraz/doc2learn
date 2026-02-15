@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PDFViewer } from '@/components/viewer/PDFViewer'
 import { ChatPageSelector } from '@/components/chat/ChatPageSelector'
+import { ResizablePanel } from '@/components/ui/resizable'
+import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import { 
   ArrowLeft, FileText, MessageSquare, Sparkles, BookOpen, 
-  Send, Loader2, Lightbulb, Target, X
+  Send, Loader2, Lightbulb, Target, X, AlertCircle
 } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
 import { apiEndpoint } from '@/lib/config'
 
 interface Document {
@@ -205,6 +207,16 @@ export function PDFViewerPage() {
 
   // Summarize document
   const handleSummarize = async () => {
+    // Check if document has content
+    if (!document?.content) {
+      toast({
+        variant: 'destructive',
+        title: 'No Content',
+        description: 'This document has no text content to summarize.',
+      })
+      return
+    }
+
     setShowSummary(true)
     setIsSummaryLoading(true)
     setSummary('')
@@ -218,7 +230,7 @@ export function PDFViewerPage() {
         },
         credentials: 'include',
         body: JSON.stringify({
-          content: document?.content,
+          content: document.content,
           language: getLanguagePreference(),
         }),
       })
@@ -228,12 +240,13 @@ export function PDFViewerPage() {
       if (response.ok) {
         setSummary(data.summary)
       } else {
-        throw new Error(data.error || 'Failed to generate summary')
+        throw new Error(data.error || `Failed to generate summary (${response.status})`)
       }
     } catch (error) {
+      console.error('Summarize error:', error)
       toast({
         variant: 'destructive',
-        title: 'Error',
+        title: 'Summarize Error',
         description: error instanceof Error ? error.message : 'Failed to generate summary',
       })
       setShowSummary(false)
@@ -244,6 +257,16 @@ export function PDFViewerPage() {
 
   // Generate exercises
   const handleGenerateExercises = async () => {
+    // Check if document has content
+    if (!document?.content) {
+      toast({
+        variant: 'destructive',
+        title: 'No Content',
+        description: 'This document has no text content to generate exercises from.',
+      })
+      return
+    }
+
     setShowExercises(true)
     setIsExercisesLoading(true)
     setExercises([])
@@ -259,7 +282,7 @@ export function PDFViewerPage() {
         },
         credentials: 'include',
         body: JSON.stringify({
-          content: document?.content,
+          content: document.content,
           language: getLanguagePreference(),
         }),
       })
@@ -269,12 +292,13 @@ export function PDFViewerPage() {
       if (response.ok) {
         setExercises(data.exercises || [])
       } else {
-        throw new Error(data.error || 'Failed to generate exercises')
+        throw new Error(data.error || `Failed to generate exercises (${response.status})`)
       }
     } catch (error) {
+      console.error('Exercises error:', error)
       toast({
         variant: 'destructive',
-        title: 'Error',
+        title: 'Exercises Error',
         description: error instanceof Error ? error.message : 'Failed to generate exercises',
       })
       setShowExercises(false)
@@ -393,23 +417,33 @@ export function PDFViewerPage() {
         {/* AI Sidebar */}
         <AnimatePresence>
           {showChat && (
-            <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 384, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="border-l border-border bg-bg-secondary flex flex-col overflow-hidden"
+            <ResizablePanel
+              defaultWidth={420}
+              minWidth={350}
+              maxWidth={600}
+              side="right"
+              className="border-l border-border bg-bg-secondary"
             >
               {/* AI Tools */}
               <div className="p-4 border-b border-border space-y-2">
-                <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-3">AI Tools</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider">AI Tools</h3>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-6 w-6 p-0 text-text-muted hover:text-text-primary"
+                    onClick={() => setShowChat(false)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <Button 
                     variant="outline" 
                     size="sm" 
                     className="justify-start border-border hover:bg-bg-tertiary text-text-secondary hover:text-text-primary"
                     onClick={handleSummarize}
-                    disabled={isSummaryLoading}
+                    disabled={isSummaryLoading || !document?.content}
                   >
                     {isSummaryLoading ? (
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -423,7 +457,7 @@ export function PDFViewerPage() {
                     size="sm" 
                     className="justify-start border-border hover:bg-bg-tertiary text-text-secondary hover:text-text-primary"
                     onClick={handleGenerateExercises}
-                    disabled={isExercisesLoading}
+                    disabled={isExercisesLoading || !document?.content}
                   >
                     {isExercisesLoading ? (
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -433,11 +467,17 @@ export function PDFViewerPage() {
                     Exercises
                   </Button>
                 </div>
+                {!document?.content && (
+                  <div className="flex items-center gap-2 p-2 bg-warning-light rounded-lg text-warning text-xs">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>No text content available for AI features</span>
+                  </div>
+                )}
               </div>
 
               {/* Summary Panel */}
               {showSummary && (
-                <div className="border-b border-border p-4 max-h-64 overflow-auto">
+                <div className="border-b border-border p-4 max-h-72 overflow-auto">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-sm font-medium text-text-primary flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-accent" />
@@ -457,14 +497,14 @@ export function PDFViewerPage() {
                       <Loader2 className="w-5 h-5 animate-spin text-text-muted" />
                     </div>
                   ) : (
-                    <p className="text-sm text-text-secondary leading-relaxed">{summary}</p>
+                    <MarkdownRenderer content={summary} className="text-sm" />
                   )}
                 </div>
               )}
 
               {/* Exercises Panel */}
               {showExercises && (
-                <div className="border-b border-border p-4 max-h-80 overflow-auto">
+                <div className="border-b border-border p-4 max-h-96 overflow-auto">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-sm font-medium text-text-primary flex items-center gap-2">
                       <Lightbulb className="w-4 h-4 text-accent" />
@@ -485,73 +525,77 @@ export function PDFViewerPage() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {exercises.map((exercise, index) => (
-                        <div key={index} className="p-3 border border-border rounded-lg bg-bg-tertiary space-y-2">
-                          <p className="text-sm font-medium text-text-primary">{index + 1}. {exercise.question}</p>
-                          
-                          {exercise.type === 'multiple_choice' && exercise.options && (
-                            <div className="space-y-1">
-                              {exercise.options.map((option, optIndex) => (
-                                <label 
-                                  key={optIndex} 
-                                  className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer hover:text-text-primary"
-                                >
-                                  <input
-                                    type="radio"
-                                    name={`exercise-${index}`}
-                                    value={option}
-                                    onChange={() => setExerciseAnswers(prev => ({ ...prev, [index]: option }))}
-                                    className="w-4 h-4 text-accent"
-                                  />
-                                  {option}
-                                </label>
-                              ))}
-                            </div>
-                          )}
-                          
-                          {exercise.type === 'fill_blank' && (
-                            <Input
-                              placeholder="Fill in the blank..."
-                              value={exerciseAnswers[index] || ''}
-                              onChange={(e) => setExerciseAnswers(prev => ({ ...prev, [index]: e.target.value }))}
-                              className="text-sm border-border bg-bg-secondary"
-                            />
-                          )}
-                          
-                          {exercise.type === 'short_answer' && (
-                            <Input
-                              placeholder="Your answer..."
-                              value={exerciseAnswers[index] || ''}
-                              onChange={(e) => setExerciseAnswers(prev => ({ ...prev, [index]: e.target.value }))}
-                              className="text-sm border-border bg-bg-secondary"
-                            />
-                          )}
-                          
-                          <div className="flex items-center gap-2 pt-1">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              className="border-border text-text-secondary hover:text-text-primary"
-                              onClick={() => checkAnswer(index)}
-                              disabled={!exerciseAnswers[index]}
-                            >
-                              Check
-                            </Button>
+                      {exercises.length === 0 ? (
+                        <p className="text-sm text-text-muted text-center py-4">No exercises generated</p>
+                      ) : (
+                        exercises.map((exercise, index) => (
+                          <div key={index} className="p-3 border border-border rounded-lg bg-bg-tertiary space-y-2">
+                            <p className="text-sm font-medium text-text-primary">{index + 1}. {exercise.question}</p>
                             
-                            {showExerciseResults[index] && (
-                              <div className="text-sm">
-                                {exerciseAnswers[index]?.toLowerCase().trim() === exercise.correctAnswer.toLowerCase().trim() ? (
-                                  <span className="text-green-500">✓ Correct!</span>
-                                ) : (
-                                  <span className="text-red-500">
-                                    ✗ Answer: {exercise.correctAnswer}
-                                  </span>
-                                )}
+                            {exercise.type === 'multiple_choice' && exercise.options && (
+                              <div className="space-y-1">
+                                {exercise.options.map((option, optIndex) => (
+                                  <label 
+                                    key={optIndex} 
+                                    className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer hover:text-text-primary"
+                                  >
+                                    <input
+                                      type="radio"
+                                      name={`exercise-${index}`}
+                                      value={option}
+                                      onChange={() => setExerciseAnswers(prev => ({ ...prev, [index]: option }))}
+                                      className="w-4 h-4 text-accent"
+                                    />
+                                    {option}
+                                  </label>
+                                ))}
                               </div>
                             )}
+                            
+                            {exercise.type === 'fill_blank' && (
+                              <Input
+                                placeholder="Fill in the blank..."
+                                value={exerciseAnswers[index] || ''}
+                                onChange={(e) => setExerciseAnswers(prev => ({ ...prev, [index]: e.target.value }))}
+                                className="text-sm border-border bg-bg-secondary"
+                              />
+                            )}
+                            
+                            {exercise.type === 'short_answer' && (
+                              <Input
+                                placeholder="Your answer..."
+                                value={exerciseAnswers[index] || ''}
+                                onChange={(e) => setExerciseAnswers(prev => ({ ...prev, [index]: e.target.value }))}
+                                className="text-sm border-border bg-bg-secondary"
+                              />
+                            )}
+                            
+                            <div className="flex items-center gap-2 pt-1">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="border-border text-text-secondary hover:text-text-primary"
+                                onClick={() => checkAnswer(index)}
+                                disabled={!exerciseAnswers[index]}
+                              >
+                                Check
+                              </Button>
+                              
+                              {showExerciseResults[index] && (
+                                <div className="text-sm">
+                                  {exerciseAnswers[index]?.toLowerCase().trim() === exercise.correctAnswer.toLowerCase().trim() ? (
+                                    <span className="text-success">✓ Correct!</span>
+                                  ) : (
+                                    <span className="text-error">
+                                      ✗ Answer: {exercise.correctAnswer}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   )}
                 </div>
@@ -590,13 +634,17 @@ export function PDFViewerPage() {
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-lg px-3 py-2 ${
+                      className={`max-w-[85%] rounded-lg px-3 py-2 ${
                         message.role === 'user'
                           ? 'bg-accent text-white'
                           : 'bg-bg-tertiary text-text-primary'
                       }`}
                     >
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      {message.role === 'user' ? (
+                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      ) : (
+                        <MarkdownRenderer content={message.content} className="text-sm" />
+                      )}
                     </div>
                   </div>
                 ))}
@@ -641,7 +689,7 @@ export function PDFViewerPage() {
                   </Button>
                 </div>
               </div>
-            </motion.div>
+            </ResizablePanel>
           )}
         </AnimatePresence>
       </div>
