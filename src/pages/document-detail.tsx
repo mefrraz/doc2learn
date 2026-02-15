@@ -1,13 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, FileText, BookOpen, HelpCircle, List, Sparkles, Loader2, Eye } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { ArrowLeft, FileText, HelpCircle, List, Sparkles, Loader2, Eye, Send, MessageSquare } from 'lucide-react'
 import { formatDate, formatFileSize } from '@/lib/utils'
 import { useToast } from '@/components/ui/use-toast'
 import { apiEndpoint } from '@/lib/config'
 import type { Document } from '@/lib/types'
+import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
+
+interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
 
 export function DocumentDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -16,6 +23,12 @@ export function DocumentDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
   const { toast } = useToast()
+  
+  // Document chat state
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+  const [chatInput, setChatInput] = useState('')
+  const [isChatLoading, setIsChatLoading] = useState(false)
+  const chatMessagesRef = useRef<HTMLDivElement>(null)
 
   const fetchDocument = async () => {
     if (!id || !token) {
@@ -45,6 +58,13 @@ export function DocumentDetailPage() {
   useEffect(() => {
     fetchDocument()
   }, [id, token])
+
+  // Auto-scroll chat to bottom
+  useEffect(() => {
+    if (chatMessagesRef.current) {
+      chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight
+    }
+  }, [chatMessages])
 
   const handleGenerateContent = async () => {
     if (!id || !token) return
@@ -86,6 +106,62 @@ export function DocumentDetailPage() {
     }
   }
 
+  // Get user's language preference
+  const getLanguagePreference = () => {
+    const lang = localStorage.getItem('i18nextLng') || 'en'
+    return lang === 'pt-PT' ? 'Portuguese' : 'English'
+  }
+
+  // Document chat handler
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || isChatLoading || !id || !token) return
+
+    const userMessage = chatInput.trim()
+    setChatInput('')
+    setChatMessages(prev => [...prev, { role: 'user', content: userMessage }])
+    setIsChatLoading(true)
+
+    try {
+      const response = await fetch(apiEndpoint(`api/ai/documents/${id}/chat`), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          message: userMessage,
+          language: getLanguagePreference(),
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setChatMessages(prev => [...prev, { role: 'assistant', content: data.response }])
+      } else {
+        throw new Error(data.error || 'Failed to get response')
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to send message',
+      })
+      // Remove the failed user message
+      setChatMessages(prev => prev.slice(0, -1))
+    } finally {
+      setIsChatLoading(false)
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSendMessage()
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -113,14 +189,8 @@ export function DocumentDetailPage() {
 
   const hasContent = document.summary || document.quiz || document.glossary
 
+  // Only Quiz and Glossary as learning options (Summary removed)
   const learningOptions = [
-    {
-      title: 'Summary',
-      description: 'Get a concise summary of the document',
-      icon: BookOpen,
-      href: `/learn/${id}/summary`,
-      available: !!document.summary,
-    },
     {
       title: 'Quiz',
       description: 'Test your knowledge with a quiz',
@@ -166,6 +236,101 @@ export function DocumentDetailPage() {
         </Link>
       </div>
 
+      {/* Compact Summary with Markdown */}
+      {document.summary && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm text-muted-foreground max-h-48 overflow-y-auto">
+              <MarkdownRenderer content={document.summary} className="text-sm" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Document Chat - Available before opening viewer */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            Chat about Document
+          </CardTitle>
+          <CardDescription>
+            Ask questions about this document before opening the viewer
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Chat Messages */}
+          <div 
+            ref={chatMessagesRef}
+            className="min-h-[150px] max-h-[300px] overflow-y-auto mb-4 space-y-3 border rounded-lg p-3 bg-muted/30"
+          >
+            {chatMessages.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">
+                <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Ask questions about this document</p>
+              </div>
+            ) : (
+              chatMessages.map((message, index) => (
+                <div
+                  key={index}
+                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[85%] rounded-lg px-3 py-2 ${
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-background border'
+                    }`}
+                  >
+                    {message.role === 'user' ? (
+                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    ) : (
+                      <MarkdownRenderer content={message.content} className="text-sm" />
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+            {isChatLoading && (
+              <div className="flex justify-start">
+                <div className="bg-background border rounded-lg px-3 py-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Chat Input */}
+          <div className="flex gap-2">
+            <Input
+              placeholder="Ask about this document..."
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="flex-1"
+              disabled={isChatLoading}
+            />
+            <Button
+              onClick={handleSendMessage}
+              disabled={!chatInput.trim() || isChatLoading}
+              size="icon"
+            >
+              {isChatLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Generate Content Card */}
       {!hasContent && (
         <Card className="border-dashed">
@@ -177,7 +342,7 @@ export function DocumentDetailPage() {
               <div>
                 <CardTitle className="text-lg">Generate Learning Content</CardTitle>
                 <CardDescription>
-                  Use AI to create flashcards, quizzes, and more from this document
+                  Use AI to create quizzes, glossary terms, and more from this document
                 </CardDescription>
               </div>
             </div>
@@ -209,7 +374,7 @@ export function DocumentDetailPage() {
         </Card>
       )}
 
-      {/* Learning Options */}
+      {/* Learning Options - Only Quiz and Glossary */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {learningOptions.map((option) => (
           <Card key={option.title} className={!option.available ? 'opacity-60' : ''}>
@@ -238,18 +403,6 @@ export function DocumentDetailPage() {
           </Card>
         ))}
       </div>
-
-      {/* Summary Preview */}
-      {document.summary && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground whitespace-pre-wrap">{document.summary}</p>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Content Stats */}
       {hasContent && (

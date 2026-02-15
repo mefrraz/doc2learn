@@ -38,10 +38,14 @@ export function PDFViewerPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null)
   const [selectedText, setSelectedText] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(0)
-  const [pageContent, setPageContent] = useState('')
   const [selectedPages, setSelectedPages] = useState<number[]>([])
+  
+  // Page context - combined to avoid race conditions
+  const [pageContext, setPageContext] = useState<{
+    pageNumber: number;
+    content: string;
+  } | null>(null)
    
   // Chat state
   const [showChat, setShowChat] = useState(true) // Start with chat open
@@ -131,16 +135,15 @@ export function PDFViewerPage() {
     setSelectedText(text)
   }, [])
 
-  // Handle page content extraction
+  // Handle page content extraction - combined with page number
   const handlePageContent = useCallback((content: string, page: number) => {
-    setPageContent(content)
-    setCurrentPage(page)
+    setPageContext({ pageNumber: page, content })
   }, [])
 
   // Handle page change from PDF viewer
-  const handlePageChange = useCallback((page: number, total: number) => {
-    setCurrentPage(page)
+  const handlePageChange = useCallback((_page: number, total: number) => {
     setTotalPages(total)
+    // Note: page content will be updated separately via handlePageContent
   }, [])
 
   // Get user's language preference
@@ -154,11 +157,14 @@ export function PDFViewerPage() {
     if (!chatInput.trim() || isChatLoading) return
 
     const userMessage = chatInput.trim()
+    const currentPageNumber = pageContext?.pageNumber || 1
+    const currentPageContent = pageContext?.content || ''
+    
     setChatInput('')
     setChatMessages(prev => [...prev, { 
       role: 'user', 
       content: userMessage,
-      pageNumber: currentPage,
+      pageNumber: currentPageNumber,
       selectedPages: selectedPages.length > 0 ? [...selectedPages] : undefined
     }])
     setIsChatLoading(true)
@@ -174,8 +180,8 @@ export function PDFViewerPage() {
         body: JSON.stringify({
           message: userMessage,
           selectedText,
-          pageContent,
-          pageNumber: currentPage,
+          pageContent: currentPageContent,
+          pageNumber: currentPageNumber,
           selectedPages: selectedPages.length > 0 ? selectedPages : undefined,
           language: getLanguagePreference(),
         }),
@@ -318,7 +324,7 @@ export function PDFViewerPage() {
                 <div>
                   <h3 className="text-sm font-medium text-text-primary">Chat</h3>
                   <p className="text-xs text-text-muted">
-                    Page {currentPage} of {totalPages || '?'}
+                    Page {pageContext?.pageNumber || 1} of {totalPages || '?'}
                     {selectedPages.length > 0 && ` • ${selectedPages.length} pages selected`}
                   </p>
                 </div>
@@ -408,7 +414,7 @@ export function PDFViewerPage() {
               <div className="p-4 border-t border-border bg-bg-secondary">
                 <div className="flex gap-2">
                   <Input
-                    placeholder={`Ask about page ${currentPage}...`}
+                    placeholder={`Ask about page ${pageContext?.pageNumber || 1}...`}
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     onKeyDown={handleKeyDown}
@@ -428,7 +434,7 @@ export function PDFViewerPage() {
                   </Button>
                 </div>
                 <p className="text-xs text-text-muted mt-2">
-                  Press Enter to send • Context: Page {currentPage}
+                  Press Enter to send • Context: Page {pageContext?.pageNumber || 1}
                   {selectedPages.length > 0 && ` + ${selectedPages.length} selected`}
                 </p>
               </div>
