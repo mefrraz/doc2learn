@@ -120,13 +120,15 @@ router.post('/upload', authenticateToken, requireAuth, uploadMemoryMiddleware.si
       
       console.log('Uploadthing response:', JSON.stringify(uploadResult, null, 2));
       
-      // Response structure is { data: UploadedFileResponse[], error: null }
-      if (uploadResult.data && uploadResult.data[0]) {
-        fileUrl = uploadResult.data[0].url;
-        fileKey = uploadResult.data[0].key;
+      // Response is an array of UploadFileResult
+      // Each result has { data: UploadedFileResponse, error: UploadThingError }
+      const result = uploadResult[0];
+      if (result.data) {
+        fileUrl = result.data.url;
+        fileKey = result.data.key;
       } else {
-        console.error('Uploadthing error:', uploadResult.error);
-        throw new Error(`Upload failed: ${uploadResult.error?.message || 'No data returned'}`);
+        console.error('Uploadthing error:', result.error);
+        throw new Error(`Upload failed: ${result.error?.message || 'No data returned'}`);
       }
     } catch (uploadError) {
       console.error('Uploadthing upload error:', uploadError);
