@@ -91,10 +91,6 @@ export function PDFToolbar({
     if (currentPage < totalPages) onPageChange(currentPage + 1)
   }, [currentPage, totalPages, onPageChange])
 
-  const toggleViewMode = useCallback(() => {
-    onViewModeChange(viewMode === 'single' ? 'continuous' : 'single')
-  }, [viewMode, onViewModeChange])
-
   return (
     <div className={`flex items-center justify-between px-4 py-2 bg-bg-secondary border-b border-border ${className}`}>
       {/* Left: Page Navigation */}

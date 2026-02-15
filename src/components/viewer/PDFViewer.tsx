@@ -27,8 +27,8 @@ export function PDFViewer({
   onTextSelect, 
   onPageChange,
   onPageContent,
-  selectedPages,
-  onSelectedPagesChange,
+  selectedPages: _selectedPages,
+  onSelectedPagesChange: _onSelectedPagesChange,
   className = '' 
 }: PDFViewerProps) {
   // State

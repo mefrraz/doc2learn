@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
-import { Check, X, Layers, FileText } from 'lucide-react'
+import { Check, X, Layers } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
@@ -66,15 +66,6 @@ export function ChatPageSelector({
     setLocalSelection(new Set(selectedPages))
     setIsOpen(false)
   }, [selectedPages])
-
-  // Quick select range
-  const selectRange = useCallback((start: number, end: number) => {
-    const newSet = new Set(localSelection)
-    for (let i = start; i <= end; i++) {
-      newSet.add(i)
-    }
-    setLocalSelection(newSet)
-  }, [localSelection])
 
   return (
     <div className={className}>
