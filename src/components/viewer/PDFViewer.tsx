@@ -1,7 +1,9 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, FileText, Loader2 } from 'lucide-react'
+import { FileText, Loader2 } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { PDFToolbar, ViewMode } from './PDFToolbar'
+import { PDFContinuousView } from './PDFContinuousView'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 
@@ -10,37 +12,72 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 
 interface PDFViewerProps {
   file: string | Blob | File
+  viewMode?: ViewMode
   onTextSelect?: (text: string) => void
   onPageChange?: (page: number, totalPages: number) => void
   onPageContent?: (content: string, page: number) => void
+  selectedPages?: number[]
+  onSelectedPagesChange?: (pages: number[]) => void
   className?: string
 }
 
 export function PDFViewer({ 
   file, 
+  viewMode: initialViewMode = 'single',
   onTextSelect, 
   onPageChange,
   onPageContent,
+  selectedPages,
+  onSelectedPagesChange,
   className = '' 
 }: PDFViewerProps) {
+  // State
   const [numPages, setNumPages] = useState<number>(0)
   const [currentPage, setCurrentPage] = useState<number>(1)
   const [scale, setScale] = useState<number>(1.0)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode)
+  
+  // Refs
   const pdfDocRef = useRef<any>(null)
+  const singlePageContainerRef = useRef<HTMLDivElement>(null)
 
-  const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
-    setNumPages(numPages)
+  // Load view mode preference from localStorage
+  useEffect(() => {
+    const savedViewMode = localStorage.getItem('pdf-view-mode') as ViewMode | null
+    if (savedViewMode && (savedViewMode === 'single' || savedViewMode === 'continuous')) {
+      setViewMode(savedViewMode)
+    }
+  }, [])
+
+  // Save view mode preference
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    setViewMode(mode)
+    localStorage.setItem('pdf-view-mode', mode)
+  }, [])
+
+  // Handle document load success
+  const onDocumentLoadSuccess = useCallback((pdf: any) => {
+    setNumPages(pdf.numPages)
     setLoading(false)
-    onPageChange?.(1, numPages)
-    pdfDocRef.current = null // Will be set when we need to extract text
+    onPageChange?.(1, pdf.numPages)
+    pdfDocRef.current = pdf
   }, [onPageChange])
 
-  // Extract text content from current page
-  const extractPageText = useCallback(async (pageNum: number, pdfDoc: any) => {
+  // Handle document load error
+  const onDocumentLoadError = useCallback((error: Error) => {
+    console.error('Error loading PDF:', error)
+    setError('Failed to load PDF. Please try again.')
+    setLoading(false)
+  }, [])
+
+  // Extract text content from a page
+  const extractPageText = useCallback(async (pageNum: number) => {
+    if (!pdfDocRef.current) return ''
+    
     try {
-      const page = await pdfDoc.getPage(pageNum)
+      const page = await pdfDocRef.current.getPage(pageNum)
       const textContent = await page.getTextContent()
       const text = textContent.items
         .map((item: any) => item.str)
@@ -52,33 +89,24 @@ export function PDFViewer({
     }
   }, [])
 
-  // Handle page change and extract text
-  const handlePageChange = useCallback((page: number, total: number) => {
-    setCurrentPage(page)
-    onPageChange?.(page, total)
-    
-    // Extract text from new page if callback is provided
-    if (onPageContent && pdfDocRef.current) {
-      extractPageText(page, pdfDocRef.current).then(text => {
-        if (text) {
-          onPageContent(text, page)
-        }
-      })
-    }
-  }, [onPageChange, onPageContent, extractPageText])
-
-  const onDocumentLoadError = useCallback((error: Error) => {
-    console.error('Error loading PDF:', error)
-    setError('Failed to load PDF. Please try again.')
-    setLoading(false)
-  }, [])
-
-  const goToPage = useCallback((page: number) => {
+  // Handle page change
+  const handlePageChange = useCallback((page: number) => {
     if (page >= 1 && page <= numPages) {
-      handlePageChange(page, numPages)
+      setCurrentPage(page)
+      onPageChange?.(page, numPages)
+      
+      // Extract text from new page if callback is provided
+      if (onPageContent && pdfDocRef.current) {
+        extractPageText(page).then(text => {
+          if (text) {
+            onPageContent(text, page)
+          }
+        })
+      }
     }
-  }, [numPages, handlePageChange])
+  }, [numPages, onPageChange, onPageContent, extractPageText])
 
+  // Zoom controls
   const zoomIn = useCallback(() => {
     setScale(prev => Math.min(prev + 0.25, 3.0))
   }, [])
@@ -99,6 +127,25 @@ export function PDFViewer({
     }
   }, [onTextSelect])
 
+  // Scroll to page in continuous mode
+  const scrollToPage = useCallback((page: number) => {
+    if (viewMode === 'continuous') {
+      const pageElement = document.querySelector(`[data-page="${page}"]`)
+      if (pageElement) {
+        pageElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }
+  }, [viewMode])
+
+  // Combined page change handler
+  const handlePageChangeWithScroll = useCallback((page: number) => {
+    handlePageChange(page)
+    if (viewMode === 'continuous') {
+      scrollToPage(page)
+    }
+  }, [handlePageChange, viewMode, scrollToPage])
+
+  // Error state
   if (error) {
     return (
       <div className={`flex flex-col items-center justify-center py-16 ${className}`}>
@@ -111,93 +158,77 @@ export function PDFViewer({
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
-      {/* Controls */}
-      <div className="flex items-center justify-between px-4 py-2 bg-bg-secondary border-b border-border">
-        {/* Page Navigation */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => goToPage(currentPage - 1)}
-            disabled={currentPage <= 1}
-            className="w-8 h-8 rounded-lg hover:bg-bg-tertiary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          
-          <span className="text-sm text-text-secondary font-mono min-w-[80px] text-center">
-            {currentPage} / {numPages || '...'}
-          </span>
-          
-          <button
-            onClick={() => goToPage(currentPage + 1)}
-            disabled={currentPage >= numPages}
-            className="w-8 h-8 rounded-lg hover:bg-bg-tertiary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Zoom Controls */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={zoomOut}
-            disabled={scale <= 0.5}
-            className="w-8 h-8 rounded-lg hover:bg-bg-tertiary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors"
-          >
-            <ZoomOut className="w-4 h-4" />
-          </button>
-          
-          <span className="text-sm text-text-secondary font-mono min-w-[50px] text-center">
-            {Math.round(scale * 100)}%
-          </span>
-          
-          <button
-            onClick={zoomIn}
-            disabled={scale >= 3.0}
-            className="w-8 h-8 rounded-lg hover:bg-bg-tertiary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors"
-          >
-            <ZoomIn className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
+      {/* Toolbar */}
+      <PDFToolbar
+        currentPage={currentPage}
+        totalPages={numPages}
+        scale={scale}
+        viewMode={viewMode}
+        onPageChange={handlePageChangeWithScroll}
+        onZoomIn={zoomIn}
+        onZoomOut={zoomOut}
+        onViewModeChange={handleViewModeChange}
+      />
 
       {/* PDF Content */}
-      <div 
-        className="flex-1 overflow-auto bg-bg-tertiary p-4 scrollbar-thin"
-        onMouseUp={handleMouseUp}
-      >
-        <div className="flex justify-center">
-          {loading && (
-            <div className="flex flex-col items-center justify-center py-16">
-              <Loader2 className="w-8 h-8 animate-spin text-accent mb-4" />
-              <p className="text-text-secondary">Loading PDF...</p>
-            </div>
-          )}
-          
-          <Document
-            file={file}
-            onLoadSuccess={(pdf) => {
-              pdfDocRef.current = pdf
-              onDocumentLoadSuccess({ numPages: pdf.numPages })
-            }}
-            onLoadError={onDocumentLoadError}
-            loading=""
-          >
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: loading ? 0 : 1 }}
-              transition={{ duration: 0.3 }}
+      {viewMode === 'continuous' ? (
+        <PDFContinuousView
+          file={file}
+          scale={scale}
+          onTextSelect={onTextSelect}
+          onPageChange={onPageChange}
+          onPageContent={onPageContent}
+          onLoadSuccess={(numPages) => {
+            setNumPages(numPages)
+            setLoading(false)
+          }}
+          onLoadError={onDocumentLoadError}
+          className="flex-1"
+        />
+      ) : (
+        // Single Page View
+        <div 
+          ref={singlePageContainerRef}
+          className="flex-1 overflow-auto bg-bg-tertiary p-4 scrollbar-thin"
+          onMouseUp={handleMouseUp}
+        >
+          <div className="flex justify-center min-h-full">
+            {loading && (
+              <div className="flex flex-col items-center justify-center py-16">
+                <Loader2 className="w-8 h-8 animate-spin text-accent mb-4" />
+                <p className="text-text-secondary">Loading PDF...</p>
+              </div>
+            )}
+            
+            <Document
+              file={file}
+              onLoadSuccess={onDocumentLoadSuccess}
+              onLoadError={onDocumentLoadError}
+              loading=""
             >
-              <Page
-                pageNumber={currentPage}
-                scale={scale}
-                className="shadow-lg"
-                renderTextLayer={true}
-                renderAnnotationLayer={true}
-              />
-            </motion.div>
-          </Document>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: loading ? 0 : 1 }}
+                transition={{ duration: 0.3 }}
+                className="flex items-center justify-center min-h-full"
+              >
+                <Page
+                  pageNumber={currentPage}
+                  scale={scale}
+                  className="shadow-lg"
+                  renderTextLayer={true}
+                  renderAnnotationLayer={true}
+                  loading={
+                    <div className="flex items-center justify-center w-[600px] h-[800px] bg-bg-secondary">
+                      <Loader2 className="w-6 h-6 animate-spin text-accent" />
+                    </div>
+                  }
+                />
+              </motion.div>
+            </Document>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
@@ -207,9 +238,17 @@ interface PDFThumbnailsProps {
   file: string | Blob | File
   currentPage: number
   onPageSelect: (page: number) => void
+  selectedPages?: number[]
+  showSelection?: boolean
 }
 
-export function PDFThumbnails({ file, currentPage, onPageSelect }: PDFThumbnailsProps) {
+export function PDFThumbnails({ 
+  file, 
+  currentPage, 
+  onPageSelect,
+  selectedPages = [],
+  showSelection = false
+}: PDFThumbnailsProps) {
   const [numPages, setNumPages] = useState<number>(0)
 
   return (
@@ -218,27 +257,41 @@ export function PDFThumbnails({ file, currentPage, onPageSelect }: PDFThumbnails
         file={file}
         onLoadSuccess={({ numPages }) => setNumPages(numPages)}
       >
-        {Array.from(new Array(numPages), (_, index) => (
-          <button
-            key={`thumbnail-${index + 1}`}
-            onClick={() => onPageSelect(index + 1)}
-            className={`w-full rounded overflow-hidden transition-all ${
-              currentPage === index + 1
-                ? 'ring-2 ring-accent'
-                : 'hover:ring-2 hover:ring-border-strong'
-            }`}
-          >
-            <Page
-              pageNumber={index + 1}
-              scale={0.2}
-              className="mx-auto"
-            />
-            <span className="block text-xs text-center text-text-muted py-1">
-              {index + 1}
-            </span>
-          </button>
-        ))}
+        {Array.from(new Array(numPages), (_, index) => {
+          const pageNum = index + 1
+          const isSelected = selectedPages.includes(pageNum)
+          const isCurrentPage = currentPage === pageNum
+          
+          return (
+            <button
+              key={`thumbnail-${pageNum}`}
+              onClick={() => onPageSelect(pageNum)}
+              className={`w-full rounded overflow-hidden transition-all relative ${
+                isCurrentPage
+                  ? 'ring-2 ring-accent'
+                  : 'hover:ring-2 hover:ring-border-strong'
+              } ${isSelected && showSelection ? 'bg-accent/20' : ''}`}
+            >
+              <Page
+                pageNumber={pageNum}
+                scale={0.2}
+                className="mx-auto"
+              />
+              <span className="block text-xs text-center text-text-muted py-1">
+                {pageNum}
+              </span>
+              {isSelected && showSelection && (
+                <div className="absolute top-1 right-1 w-4 h-4 bg-accent rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs">✓</span>
+                </div>
+              )}
+            </button>
+          )
+        })}
       </Document>
     </div>
   )
 }
+
+// Re-export types
+export type { ViewMode }

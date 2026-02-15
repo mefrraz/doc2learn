@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PDFViewer } from '@/components/viewer/PDFViewer'
+import { ChatPageSelector } from '@/components/chat/ChatPageSelector'
 import { 
   ArrowLeft, FileText, MessageSquare, Sparkles, BookOpen, 
   Send, Loader2, Lightbulb, Target, X
@@ -42,8 +43,10 @@ export function PDFViewerPage() {
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null)
   const [selectedText, setSelectedText] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(0)
   const [pageContent, setPageContent] = useState('')
-  
+  const [selectedPages, setSelectedPages] = useState<number[]>([])
+   
   // Chat state
   const [showChat, setShowChat] = useState(false)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
@@ -125,6 +128,12 @@ export function PDFViewerPage() {
     setCurrentPage(page)
   }, [])
 
+  // Handle page change from PDF viewer
+  const handlePageChange = useCallback((page: number, total: number) => {
+    setCurrentPage(page)
+    setTotalPages(total)
+  }, [])
+
   // Get user's language preference
   const getLanguagePreference = () => {
     const lang = localStorage.getItem('i18nextLng') || 'en'
@@ -153,6 +162,7 @@ export function PDFViewerPage() {
           selectedText,
           pageContent,
           pageNumber: currentPage,
+          selectedPages,
           language: getLanguagePreference(),
         }),
       })
@@ -337,6 +347,9 @@ export function PDFViewerPage() {
               file={pdfBlob}
               onTextSelect={handleTextSelect}
               onPageContent={handlePageContent}
+              onPageChange={handlePageChange}
+              selectedPages={selectedPages}
+              onSelectedPagesChange={setSelectedPages}
               className="h-full"
             />
           ) : (
@@ -582,6 +595,18 @@ export function PDFViewerPage() {
 
               {/* Chat Input */}
               <div className="p-4 border-t border-border">
+                {/* Page Selector */}
+                {pdfBlob && totalPages > 0 && (
+                  <div className="mb-3 relative">
+                    <ChatPageSelector
+                      totalPages={totalPages}
+                      selectedPages={selectedPages}
+                      onSelectionChange={setSelectedPages}
+                      file={pdfBlob}
+                    />
+                  </div>
+                )}
+                
                 <div className="flex gap-2">
                   <Input
                     placeholder="Ask a question..."
