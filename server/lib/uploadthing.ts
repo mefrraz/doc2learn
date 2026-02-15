@@ -5,16 +5,39 @@ import type { Request, Response } from 'express'
 const f = createUploadthing()
 
 // UTApi client for server-side uploads
-// Pass token if available in environment
-const token = process.env.UPLOADTHING_TOKEN;
-export const utapi = token ? new UTApi({ token }) : new UTApi();
+// Support both new V7 token format and legacy UPLOADTHING_SECRET + UPLOADTHING_APP_ID
+function createUTApi() {
+  const token = process.env.UPLOADTHING_TOKEN;
+  const secret = process.env.UPLOADTHING_SECRET;
+  const appId = process.env.UPLOADTHING_APP_ID;
+  
+  if (token) {
+    // V7 format: base64 encoded JSON { apiKey, appId, regions }
+    return new UTApi({ token });
+  } else if (secret && appId) {
+    // Legacy format: construct token from secret and appId
+    const tokenData = {
+      apiKey: secret,
+      appId: appId,
+      regions: ['us-east-1']
+    };
+    const encodedToken = Buffer.from(JSON.stringify(tokenData)).toString('base64');
+    return new UTApi({ token: encodedToken });
+  } else {
+    // No credentials - will fail at runtime
+    console.warn('Warning: No Uploadthing credentials configured');
+    return new UTApi();
+  }
+}
+
+export const utapi = createUTApi();
 
 // File router for PDF uploads (for direct client uploads if needed)
 export const uploadRouter = {
   // PDF uploader route
   pdfUploader: f({
     pdf: {
-      maxFileSize: '50MB' as const,
+      maxFileSize: '50MB',
       maxFileCount: 1,
     },
   })
