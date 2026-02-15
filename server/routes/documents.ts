@@ -114,8 +114,18 @@ router.post('/upload', authenticateToken, requireAuth, uploadMemoryMiddleware.si
     let fileKey = '';
     
     try {
+      // Debug: log file details
+      console.log('File details:', {
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        bufferLength: file.buffer.length
+      });
+      
       // Use UTFile for proper buffer handling
-      const fileToUpload = new UTFile([file.buffer], file.originalname);
+      // Convert buffer to Uint8Array for proper handling
+      const fileBuffer = new Uint8Array(file.buffer);
+      const fileToUpload = new UTFile([fileBuffer], file.originalname);
       const uploadResult = await utapi.uploadFiles([fileToUpload]);
       
       console.log('Uploadthing response:', JSON.stringify(uploadResult, null, 2));
