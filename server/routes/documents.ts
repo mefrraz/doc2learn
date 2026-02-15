@@ -8,8 +8,7 @@ import { parsePDF, truncateText } from '../lib/pdf-parser';
 import { AIService, AIProviderType } from '../lib/ai';
 import { COMBINED_PROMPT, parseAIJsonResponse } from '../lib/prompts';
 import { decrypt } from '../lib/encryption';
-import { utapi } from '../lib/uploadthing';
-import { UTFile } from 'uploadthing/server';
+import { uploadPDF, deletePDF } from '../lib/vercel-blob';
 
 const router = Router();
 
@@ -109,12 +108,11 @@ router.post('/upload', authenticateToken, requireAuth, uploadMemoryMiddleware.si
     const file = req.file as UploadedMemoryFile;
     const title = req.body.title || file.originalname.replace('.pdf', '');
 
-    // Upload to Uploadthing
+    // Upload to Vercel Blob
     let fileUrl = '';
     let fileKey = '';
     
     try {
-      // Debug: log file details
       console.log('File details:', {
         originalname: file.originalname,
         mimetype: file.mimetype,
@@ -122,28 +120,14 @@ router.post('/upload', authenticateToken, requireAuth, uploadMemoryMiddleware.si
         bufferLength: file.buffer.length
       });
       
-      // Use UTFile from uploadthing/server for proper server-side uploads
-      // Convert Buffer to Uint8Array for proper BlobPart compatibility
-      const uint8Array = new Uint8Array(file.buffer);
-      const fileToUpload = new UTFile([uint8Array], file.originalname, { 
-        type: file.mimetype 
-      });
-      const uploadResult = await utapi.uploadFiles([fileToUpload]);
+      // Upload to Vercel Blob storage
+      const uploadResult = await uploadPDF(file.buffer, file.originalname);
+      fileUrl = uploadResult.url;
+      fileKey = uploadResult.key;
       
-      console.log('Uploadthing response:', JSON.stringify(uploadResult, null, 2));
-      
-      // Response is an array of UploadFileResult
-      // Each result has { data: UploadedFileResponse, error: UploadThingError }
-      const result = uploadResult[0];
-      if (result.data) {
-        fileUrl = result.data.url;
-        fileKey = result.data.key;
-      } else {
-        console.error('Uploadthing error:', result.error);
-        throw new Error(`Upload failed: ${result.error?.message || 'No data returned'}`);
-      }
+      console.log('Vercel Blob upload successful:', { fileUrl, fileKey });
     } catch (uploadError) {
-      console.error('Uploadthing upload error:', uploadError);
+      console.error('Vercel Blob upload error:', uploadError);
       return res.status(500).json({ error: 'Failed to upload file to cloud storage' });
     }
 
@@ -243,14 +227,14 @@ router.delete('/:id', authenticateToken, requireAuth, async (req: AuthRequest, r
       return res.status(404).json({ error: 'Document not found' });
     }
 
-    // Delete from Uploadthing if fileKey exists
-    if (document.fileKey) {
+    // Delete from Vercel Blob if fileUrl exists
+    if (document.fileUrl) {
       try {
-        await utapi.deleteFiles([document.fileKey]);
-        console.log(`Deleted file from Uploadthing: ${document.fileKey}`);
+        await deletePDF(document.fileUrl);
+        console.log(`Deleted file from Vercel Blob: ${document.fileKey}`);
       } catch (deleteError) {
-        console.error('Failed to delete file from Uploadthing:', deleteError);
-        // Continue with deletion even if Uploadthing deletion fails
+        console.error('Failed to delete file from Vercel Blob:', deleteError);
+        // Continue with deletion even if Blob deletion fails
       }
     }
 
