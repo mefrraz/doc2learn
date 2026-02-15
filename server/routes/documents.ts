@@ -319,7 +319,10 @@ router.post('/:id/generate', authenticateToken, requireAuth, async (req: AuthReq
 
     // Generate content using AI
     const prompt = COMBINED_PROMPT.user(truncatedContent);
-    const systemPrompt = COMBINED_PROMPT.system;
+    // COMBINED_PROMPT.system is a function, so we need to call it
+    const systemPrompt = typeof COMBINED_PROMPT.system === 'function' 
+      ? COMBINED_PROMPT.system() 
+      : COMBINED_PROMPT.system;
 
     const response = await aiService.generateChatCompletion([
       { role: 'system', content: systemPrompt },
