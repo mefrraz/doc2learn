@@ -20,6 +20,8 @@ interface Document {
   filename: string
   fileType: string
   filePath?: string
+  fileUrl?: string
+  fileKey?: string
 }
 
 interface Exercise {
@@ -86,8 +88,23 @@ export function PDFViewerPage() {
           const data = await response.json()
           setDocument(data.document)
           
-          // If document has a file path, fetch the PDF with authentication
-          if (data.document.filePath) {
+          // If document has a fileUrl (Vercel Blob), use it directly
+          if (data.document.fileUrl) {
+            // Vercel Blob URLs are public, so we can fetch directly
+            try {
+              const fileResponse = await fetch(data.document.fileUrl)
+              if (fileResponse.ok) {
+                const blob = await fileResponse.blob()
+                setPdfBlob(blob)
+              } else {
+                console.error('Failed to fetch PDF from Blob:', fileResponse.status)
+              }
+            } catch (fileError) {
+              console.error('Error fetching PDF from Blob:', fileError)
+            }
+          } 
+          // Fallback: If document has a filePath (legacy local storage), fetch via API
+          else if (data.document.filePath) {
             try {
               const fileResponse = await fetch(apiEndpoint(`api/documents/${id}/file`), {
                 headers: {
