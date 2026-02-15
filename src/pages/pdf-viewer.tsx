@@ -6,10 +6,10 @@ import { PDFViewer } from '@/components/viewer/PDFViewer'
 import { PageSelector } from '@/components/viewer/PageSelector'
 import { ResizablePanel } from '@/components/ui/resizable'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
-import { Textarea } from '@/components/ui/textarea'
+import { CollapsibleChatInput } from '@/components/ui/collapsible-chat-input'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { 
-  ArrowLeft, FileText, MessageSquare, Send, Loader2, X, 
+  ArrowLeft, FileText, MessageSquare, Loader2, X, 
   Layers, ChevronDown, ChevronUp
 } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
@@ -211,14 +211,6 @@ export function PDFViewerPage() {
       setChatMessages(prev => prev.slice(0, -1))
     } finally {
       setIsChatLoading(false)
-    }
-  }
-
-  // Handle Enter key in chat input (Shift+Enter for new line)
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSendMessage()
     }
   }
 
@@ -499,34 +491,17 @@ export function PDFViewerPage() {
                 )}
               </div>
 
-              {/* Chat Input - Fixed at bottom with multiline textarea */}
-              <div className="p-4 border-t border-border bg-bg-secondary">
-                <div className="flex gap-2 items-end">
-                  <Textarea
-                    placeholder={`Ask about ${selectedPages.length > 0 ? `${selectedPages.length} selected pages` : `page ${pageContext?.pageNumber || 1}`}...`}
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    disabled={isChatLoading}
-                    maxRows={15}
-                    minRows={1}
-                    className="flex-1"
-                  />
-                  <Button
-                    onClick={handleSendMessage}
-                    disabled={!chatInput.trim() || isChatLoading}
-                    className="bg-accent hover:bg-accent-hover text-white px-4 h-10 flex-shrink-0"
-                  >
-                    {isChatLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
-                <p className="text-xs text-text-muted mt-2">
-                  Enter to send • Shift+Enter for new line
-                </p>
+              {/* Chat Input - Fixed at bottom with collapsible input */}
+              <div className="border-t border-border">
+                <CollapsibleChatInput
+                  value={chatInput}
+                  onChange={setChatInput}
+                  onSend={handleSendMessage}
+                  placeholder={`Ask about ${selectedPages.length > 0 ? `${selectedPages.length} selected pages` : `page ${pageContext?.pageNumber || 1}`}...`}
+                  disabled={false}
+                  isLoading={isChatLoading}
+                  maxRows={15}
+                />
               </div>
             </ResizablePanel>
           )}
