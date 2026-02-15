@@ -123,9 +123,13 @@ router.post('/upload', authenticateToken, requireAuth, uploadMemoryMiddleware.si
       });
       
       // Use UTFile for proper buffer handling
-      // Try with Blob first, then fallback to Uint8Array
-      const blob = new Blob([file.buffer], { type: file.mimetype });
-      const fileToUpload = new UTFile([blob as any], file.originalname);
+      // Convert Buffer to Uint8Array for better compatibility
+      const uint8Array = Uint8Array.from(file.buffer);
+      const fileToUpload = new UTFile(
+        [uint8Array], 
+        file.originalname, 
+        { type: file.mimetype }  // Pass type explicitly
+      );
       const uploadResult = await utapi.uploadFiles([fileToUpload]);
       
       console.log('Uploadthing response:', JSON.stringify(uploadResult, null, 2));
